@@ -1,6 +1,6 @@
 ---
-title: "Replication of Problems 1 and 2 of Tversky & Kahneman (1981, *Science*)"
-author: "Your Name (your.email@stanford.edu)"
+title: "Replication of Experiment 3 of Galinsky et al. (2008), *Journal of Personality and Social Psychology*"
+author: "Renee Creppy (rcreppy@stanford.edu)"
 date: today
 date-format: long
 format:
@@ -75,20 +75,17 @@ original_p_loss <- original$risky[original$condition == "loss"] / original$n[ori
 ::: {.callout-note appearance="simple" icon=false}
 ## Project links
 
-- **Original paper:** Tversky, A., & Kahneman, D. (1981). The framing of decisions and the
-  psychology of choice. *Science, 211*(4481), 453–458. <https://doi.org/10.1126/science.7455683>
+- **Original paper:** Galinsky, A. D., Magee, J. C., Gruenfeld, D. H, Whitson, J. A., & Liljenquist, K. A. (2008). Power reduces the press of the situation: Implications for creativity, conformity, and dissonance. *Journal of Personality and Social Psychology, 95*(6), 1450–1466. <https://doi.org/10.1037/a0012633>
 - **Preregistration:** [OSF registration](https://osf.io/XXXXX) *(registered YYYY-MM-DD, before final data collection)*
 - **Live experiment:** <https://psych251.github.io/your-repo/> (take the study exactly as participants did)
-- **Repository:** <https://github.com/psych251/your-repo> (experiment code, data, and this report)
+- **Repository:** <https://github.com/psych251/galinsky2008.git> (experiment code, data, and this report)
 :::
 
 # AI use statement
+I used ChatGPT to help me understand and clarify aspects of the original study (statistical analyses and conditions). I also used it to brainstorm a possible rescue/extension, especially with deception being the key manipulation. I did not use AI to generate or write the proposal text. 
 
 ::: {.callout-tip icon=false}
-## Guidance
 
-This statement comes first so a reader knows how the work was produced before reading it. Keep
-it current from the start of the project rather than reconstructing it at the end.
 
 **Course policy: you write all of the text in this report yourself.** AI tools may help with
 code, and may comment on drafts you have written, but they may not write, rewrite or paraphrase
@@ -236,6 +233,11 @@ bind_rows(
 # Phase 1: Replication
 
 ## Introduction
+
+
+I am broadly interested in how children understand social hierarchy, particularly how they reason about power, merit, and legitimacy.For this project, I have selected a related paper that explores whether power protects people from being influenced. I chose this paper because this adult study is a useful starting point in regards to understanding how people come to understand social structures involving power.
+
+The stimuli used in this study were a sentence formation task, autobiographical power-priming instructions, and (bogus) previous participation evaluation sheets. The key statistical test that I preregistered was an independent-samples t-test comparing the conformity means of the high-power and low-power conditions. Since the original study was done in-person, one challenge I might face is replicating the conformity manipulation, since it relies on deception. Online participants might be more skeptical of bots, especially with the bogus evaluation sheets. One rescue measure I could take would be to come up with a cover story to make this more convincing for participants. 
 
 ::: {.callout-tip icon=false}
 ## Guidance
