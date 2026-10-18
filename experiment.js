@@ -217,6 +217,9 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
       "power—what happened, how you felt, etc.",
   };
   const PRIME_MIN_CHARS = 200;
+  // The consent says participants may decline any question, so the essay and each sentence
+  // have this opt-out; ticking it lifts the requirement and is logged as `declined: true`.
+  const DECLINE_TEXT = "I'd prefer not to answer";
   const essayCounterText = (n) =>
     n >= PRIME_MIN_CHARS
       ? `✓ ${n} characters (minimum of ${PRIME_MIN_CHARS} reached)`
@@ -237,6 +240,12 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
             requiredErrorText: `Please write at least ${PRIME_MIN_CHARS} characters.`,
             validators: [{ type: "text", minLength: PRIME_MIN_CHARS,
               text: `Please write at least ${PRIME_MIN_CHARS} characters.` }],
+            // Hidden (so neither required nor validated) once the participant declines; SurveyJS
+            // then drops any text typed in it when the page is submitted.
+            visibleIf: "{essay_declined} != true",
+          }, {
+            type: "boolean", name: "essay_declined", renderAs: "checkbox",
+            title: DECLINE_TEXT, label: DECLINE_TEXT, titleLocation: "hidden",
           }],
         }],
       }),
@@ -249,7 +258,8 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
       },
       data: { task: "power_prime" },
       on_finish: (data) => {
-        data.essay = data.response.essay;
+        data.declined = data.response.essay_declined === true;
+        data.essay = data.declined ? "" : data.response.essay || "";
         data.essay_chars = data.essay.length;
       },
     }],
@@ -302,6 +312,8 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
           title="Please type a sentence." autocomplete="off" spellcheck="false"
           aria-describedby="sentence-error"></p>
         <p class="field-error" id="sentence-error" role="alert" hidden>Please type a sentence.</p>
+        <p class="decline"><label><input type="checkbox" id="sentence-declined" name="declined" value="yes">
+          ${DECLINE_TEXT}</label></p>
       </div>`,
     autofocus: "sentence",
     data: {
@@ -327,9 +339,18 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
           input.removeAttribute("aria-invalid");
         }
       });
+      // Declining disables the box, which lifts the requirement.
+      const decline = document.getElementById("sentence-declined");
+      decline.addEventListener("change", () => {
+        input.disabled = decline.checked;
+        error.hidden = true;
+        input.removeAttribute("aria-invalid");
+        if (!decline.checked) input.focus();
+      });
     },
     on_finish: (data) => {
-      data.sentence = data.response.sentence;
+      data.declined = data.response.declined === "yes";
+      data.sentence = data.declined ? null : data.response.sentence;
       data.onset_time = sentenceOnset;
       data.submit_time = new Date().toISOString();
     },

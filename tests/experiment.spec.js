@@ -20,10 +20,12 @@ const FS = `http://localhost:8080/v1/projects/${PROJECT}/databases/(default)/doc
 const N_SENTENCE_SETS = 20;
 const LONG_ESSAY = "Robot participant recalls an incident. ".repeat(8); // > 200 characters
 const robotSentence = (setNumber) => "robot sentence " + setNumber;
+const DECLINED_SET = 2; // the robot ticks "I'd prefer not to answer" on this sentence set
 
 // Plays the whole study in whatever condition the page assigned (window.__condition).
 // With { stopBeforeFinish: true } it stops on the debrief screen without clicking Finish.
-async function runThroughExperiment(page, { stopBeforeFinish = false } = {}) {
+// With { declineEssay: true } it writes a short essay, then declines instead of finishing it.
+async function runThroughExperiment(page, { stopBeforeFinish = false, declineEssay = false } = {}) {
   // 1. consent
   await page.getByRole("button", { name: "I agree to participate" }).click();
   const condition = await page.evaluate(() => window.__condition);
@@ -38,8 +40,14 @@ async function runThroughExperiment(page, { stopBeforeFinish = false } = {}) {
     await expect(counter).toHaveText("10 / 200 characters minimum");
     await page.locator('input[value="Continue"]').click();
     await expect(page.getByText("Please write at least 200 characters.").first()).toBeVisible();
-    await essay.fill(LONG_ESSAY);
-    await expect(counter).toContainText(`✓ ${LONG_ESSAY.length} characters`);
+    if (declineEssay) {
+      // Declining hides the box and lifts the requirement; the partial text is not saved.
+      await page.getByText("I'd prefer not to answer", { exact: true }).click();
+      await expect(essay).toHaveCount(0);
+    } else {
+      await essay.fill(LONG_ESSAY);
+      await expect(counter).toContainText(`✓ ${LONG_ESSAY.length} characters`);
+    }
     await page.locator('input[value="Continue"]').click();
   }
   // 4. sentence task: one instructions page, then 20 sets
@@ -55,7 +63,13 @@ async function runThroughExperiment(page, { stopBeforeFinish = false } = {}) {
       await page.locator("#sentence").fill("x");
       await expect(page.locator("#sentence-error")).toBeHidden();
     }
-    await page.locator("#sentence").fill(robotSentence(i));
+    if (i === DECLINED_SET) {
+      // Declining lifts the requirement: an empty box can be submitted.
+      await page.locator("#sentence-declined").check();
+      await expect(page.locator("#sentence")).toBeDisabled();
+    } else {
+      await page.locator("#sentence").fill(robotSentence(i));
+    }
     await page.locator("#jspsych-survey-html-form-next").click();
     await set.waitFor({ state: "detached" });
   }
@@ -127,7 +141,8 @@ test.describe("experiment", () => {
       const mode = await page.evaluate(() => window.__saver.mode);
       expect(mode).toBe(EMULATOR ? "emulator" : "offline");
 
-      const condition = await runThroughExperiment(page);
+      // Condition 2 declines the essay, so both paths through the prime are checked.
+      const condition = await runThroughExperiment(page, { declineEssay: forced === 2 });
       if (forced) expect(condition).toBe(forced);
 
       // No uncaught errors from the experiment itself.
@@ -180,8 +195,15 @@ test.describe("experiment", () => {
         expect(primeRows.length).toBe(0);
       } else {
         expect(primeRows.length).toBe(1);
-        expect(primeRows[0].essay).toBe(LONG_ESSAY);
-        expect(primeRows[0].essay_chars).toBeGreaterThanOrEqual(200);
+        if (condition === 2) {
+          expect(primeRows[0].declined).toBe(true);
+          expect(primeRows[0].essay).toBe("");
+          expect(primeRows[0].essay_chars).toBe(0);
+        } else {
+          expect(primeRows[0].declined).toBe(false);
+          expect(primeRows[0].essay).toBe(LONG_ESSAY);
+          expect(primeRows[0].essay_chars).toBeGreaterThanOrEqual(200);
+        }
       }
 
       // Sentence task: 20 sets in fixed order, each with its sentence and timestamps.
@@ -191,7 +213,8 @@ test.describe("experiment", () => {
       expect(sentences[0].words).toBe("dog the barked loudly yellow");
       expect(sentences[19].words).toBe("clock the ticks loudly wall");
       for (const t of sentences) {
-        expect(t.sentence).toBe(robotSentence(t.set_number));
+        expect(t.declined).toBe(t.set_number === DECLINED_SET);
+        expect(t.sentence).toBe(t.set_number === DECLINED_SET ? null : robotSentence(t.set_number));
         expect(typeof t.rt).toBe("number");
         expect(Date.parse(t.submit_time)).toBeGreaterThanOrEqual(Date.parse(t.onset_time));
       }

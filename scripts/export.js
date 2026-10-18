@@ -16,9 +16,13 @@
  *   trials.csv         one row per jsPsych trial, long format; nested values are JSON strings
  *   errors.csv         client-side error reports
  *   export.json        the above, verbatim, for safekeeping
- *   identifiers.csv    participant_id -> Prolific ids and raw URL parameters. GITIGNORED.
- *                      Prolific ids are persistent identifiers; keep this file private and
- *                      use it only to approve/pay participants or reconcile duplicates.
+ *   identifiers.csv    participant_id -> Prolific ids, raw URL parameters, and the full
+ *                      power-prime essay text. GITIGNORED. Prolific ids are persistent
+ *                      identifiers and essays describe real incidents that may name real
+ *                      people; keep this file private.
+ *
+ * The essay text never goes into participants.csv, trials.csv or export.json: those keep
+ * only the condition and `essay_chars` for the power_prime trial.
  */
 const fs = require("fs");
 const path = require("path");
@@ -67,6 +71,23 @@ function csvCell(v) {
   return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
 
+// Remove the power-prime essay text from a trial row (both `essay` and `response.essay`).
+// Returns the text that was removed, or null if the row had none.
+function splitEssay(t) {
+  if (!("essay" in t) && !(t.response && typeof t.response === "object" && "essay" in t.response)) {
+    return { trial: t, essay: null };
+  }
+  const { essay, response, ...rest } = t;
+  const trial = { ...rest };
+  if (response && typeof response === "object") {
+    const { essay: responseEssay, ...otherResponse } = response;
+    trial.response = otherResponse;
+    return { trial, essay: essay ?? responseEssay ?? null };
+  }
+  if (response !== undefined) trial.response = response;
+  return { trial, essay: essay ?? null };
+}
+
 function writeCsv(file, rows, firstColumns) {
   const cols = [...(firstColumns || [])];
   for (const r of rows) for (const k of Object.keys(r)) if (!cols.includes(k)) cols.push(k);
@@ -107,14 +128,21 @@ function writeCsv(file, rows, firstColumns) {
     }
     pTrials.sort((a, b) => (a.trial_index ?? 0) - (b.trial_index ?? 0));
 
+    // participant_id comes from the document path, never from the trial row: if an
+    // experiment sets its own participant_id the two must not disagree, or trials.csv
+    // and participants.csv will not join. The essay text is split off here too.
+    const essays = [];
+    const pubTrials = pTrials.map(({ prolific_pid, participant_id, ...t }) => {
+      const { trial, essay } = splitEssay(t);
+      if (essay !== null) essays.push(essay);
+      return trial;
+    });
+
     // Identifiers go to a separate, gitignored file; everything committed stays anonymous.
     const { full_data, prolific_pid, prolific_study_id, prolific_session_id, url_params, ...rest } = p;
     identifiers.push({ participant_id: uid, prolific_pid, prolific_study_id, prolific_session_id,
+      power_prime_essay: essays.length ? essays.join("\n\n") : null,
       url_params, started_at: rest.started_at, completed: rest.completed });
-    // participant_id comes from the document path, never from the trial row: if an
-    // experiment sets its own participant_id the two must not disagree, or trials.csv
-    // and participants.csv will not join.
-    const pubTrials = pTrials.map(({ prolific_pid, participant_id, ...t }) => t);
     participants.push({ participant_id: uid, ...rest, n_trials_exported: pubTrials.length, trials_source: source });
     for (const t of pubTrials) trials.push({ participant_id: uid, ...t });
     dump.participants.push({ participant_id: uid, participant: rest, trials: pubTrials, n_chunks: chunks.length });
@@ -136,8 +164,8 @@ function writeCsv(file, rows, firstColumns) {
   writeCsv(path.join(outDir, "errors.csv"), errors, ["error_id", "uid", "at", "message", "trial_index"]);
   fs.writeFileSync(path.join(outDir, "export.json"), JSON.stringify(dump, null, 2));
   console.log(`  ${path.relative(process.cwd(), path.join(outDir, "export.json"))}`);
-  writeCsv(path.join(outDir, "identifiers.csv"), identifiers, ["participant_id", "prolific_pid", "prolific_study_id", "prolific_session_id"]);
-  console.log("  identifiers.csv is gitignored: it links participant ids to Prolific ids. Keep it private.");
+  writeCsv(path.join(outDir, "identifiers.csv"), identifiers, ["participant_id", "prolific_pid", "prolific_study_id", "prolific_session_id", "power_prime_essay"]);
+  console.log("  identifiers.csv is gitignored: it links participant ids to Prolific ids and holds the essay text. Keep it private.");
   const done = participants.filter((p) => p.completed).length;
   console.log(`${participants.length} participants (${done} completed), ${trials.length} trials, ${errors.length} error reports.`);
   process.exit(0);
