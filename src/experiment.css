@@ -1,22 +1,337 @@
-/* Experiment-specific styles. jsPsych's defaults are in lib/jspsych.css. */
-.jspsych-content { max-width: 720px; text-align: left; }
-.jspsych-content h1, .jspsych-content h2 { text-align: center; }
-.consent { font-size: 15px; line-height: 1.5; }
-.consent .buttons { text-align: center; }
-.stimulus { font-size: 44px; text-align: center; font-family: monospace; letter-spacing: 0.05em; }
-.fixation { font-size: 44px; text-align: center; }
-.framing { font-size: 18px; line-height: 1.6; }
-.framing .programs { margin: 1em 0; padding-left: 1.2em; }
-#jspsych-html-button-response-btngroup { text-align: center; }
+/* Experiment-specific styles. jsPsych's defaults are in lib/jspsych.css.
+ *
+ * Colours come from the Okabe-Ito palette, which stays distinguishable under the common forms
+ * of colour blindness. Every text colour meets WCAG AA (4.5:1) on its background, and no state
+ * is signalled by colour alone: errors also get an icon, a thicker border and a message. */
+
+:root {
+  --c-text: #1f2933;        /* body text, 14.8:1 on white */
+  --c-muted: #52606d;       /* secondary text, 6.5:1 */
+  --c-page: #f4f6f9;        /* page background */
+  --c-card: #ffffff;
+  --c-line: #cfd6de;        /* borders and dividers */
+  --c-primary: #0072b2;     /* Okabe-Ito blue: buttons, progress, focus (5.2:1) */
+  --c-primary-dark: #005a8c;
+  --c-primary-tint: #e6f1f8;
+  --c-error: #a84a00;       /* darkened Okabe-Ito vermillion, for text (5.8:1) */
+  --c-error-line: #d55e00;  /* Okabe-Ito vermillion, for borders */
+  --c-error-tint: #fdf1e8;
+  --c-ok: #007a5a;          /* darkened Okabe-Ito bluish green (5.3:1) */
+  --c-todo: #e69f00;        /* Okabe-Ito orange, decorative only */
+  --radius: 10px;
+  --focus-ring: 0 0 0 3px #ffffff, 0 0 0 6px var(--c-primary);
+}
+
+/* ---------------------------------------------------------------------------
+ * Page and content card
+ * ------------------------------------------------------------------------- */
+body,
+.jspsych-display-element {
+  background: var(--c-page);
+  color: var(--c-text);
+}
+.jspsych-display-element {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Open Sans", Arial, sans-serif;
+  font-size: 19px;
+  line-height: 1.6;
+}
+.jspsych-content-wrapper { padding: 24px 16px 40px; box-sizing: border-box; }
+.jspsych-content {
+  max-width: 760px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  background: var(--c-card);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 10px rgba(31, 41, 51, 0.06);
+  padding: 32px 40px;
+}
+.jspsych-content h1,
+.jspsych-content h2 {
+  text-align: center;
+  color: var(--c-text);
+  font-size: 1.5em;
+  line-height: 1.3;
+  margin: 0 0 0.6em;
+}
+.jspsych-content p { margin: 0 0 1em; }
+.jspsych-content a { color: var(--c-primary); }
 .thanks { text-align: center; }
-.todo { background: #fff3c4; border: 1px dashed #c9a400; padding: 0.4em 0.6em; }
-.sentence-set { text-align: center; }
-.sentence-count { color: #666; font-size: 14px; }
-.sentence-words { font-size: 28px; letter-spacing: 0.04em; margin: 0.8em 0; }
-.sentence-set input[type="text"] { width: 90%; font-size: 18px; padding: 6px; }
-.feedback-sheet table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-.feedback-sheet th, .feedback-sheet td { border: 1px solid #999; padding: 4px 8px; text-align: center; }
-.feedback-sheet td:last-child { text-align: left; }
-.feedback-sheet input[type="number"] { width: 4em; font-size: 16px; }
-.feedback-sheet input[type="text"] { width: 100%; box-sizing: border-box; font-size: 16px; }
+
+/* ---------------------------------------------------------------------------
+ * Progress bar (jsPsych's own; shown on every screen)
+ * ------------------------------------------------------------------------- */
+#jspsych-progressbar-container {
+  background: var(--c-card);
+  border-bottom: 1px solid var(--c-line);
+  color: var(--c-muted);
+  padding: 12px 16px;
+  margin-bottom: 0;
+  height: auto;
+  line-height: 1;
+}
+#jspsych-progressbar-container span {
+  font-size: 15px;
+  font-weight: 600;
+  padding-right: 14px;
+}
+#jspsych-progressbar-outer {
+  width: min(60%, 520px);
+  height: 12px;
+  background: var(--c-primary-tint);
+  border: 1px solid #b7d3e6;
+  border-radius: 999px;
+  overflow: hidden;
+}
+#jspsych-progressbar-inner {
+  background: var(--c-primary);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* ---------------------------------------------------------------------------
+ * Buttons (jsPsych buttons, instructions navigation, html-form submit)
+ * ------------------------------------------------------------------------- */
+.jspsych-btn {
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.2;
+  min-height: 48px;
+  min-width: 140px;
+  padding: 12px 28px;
+  margin: 0.5em;
+  color: #ffffff;
+  background: var(--c-primary);
+  border: 2px solid var(--c-primary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.jspsych-btn:hover { background: var(--c-primary-dark); border-color: var(--c-primary-dark); }
+.jspsych-btn:active { background: var(--c-primary-dark); border-color: var(--c-text); }
+.jspsych-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.jspsych-btn:disabled,
+.jspsych-btn:disabled:hover {
+  background: #eef1f4;
+  border-color: var(--c-line);
+  color: #7b8794;
+  cursor: not-allowed;
+}
+/* "Previous" on the instructions screens is a secondary action. */
+#jspsych-instructions-back:not(:disabled) {
+  background: var(--c-card);
+  color: var(--c-primary);
+}
+#jspsych-instructions-back:not(:disabled):hover { background: var(--c-primary-tint); }
+.jspsych-instructions-nav { text-align: center; margin-top: 1em; }
+#jspsych-html-button-response-btngroup { text-align: center; justify-content: center; flex-wrap: wrap; }
+
+/* ---------------------------------------------------------------------------
+ * Text inputs shared by the sentence task and the evaluation sheet
+ * ------------------------------------------------------------------------- */
+.jspsych-content input[type="text"],
+.jspsych-content input[type="number"] {
+  font-family: inherit;
+  font-size: 18px;
+  color: var(--c-text);
+  background: var(--c-card);
+  border: 2px solid #8a96a3;
+  border-radius: 6px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+.jspsych-content input[type="text"]:focus,
+.jspsych-content input[type="number"]:focus {
+  outline: none;
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px rgba(0, 114, 178, 0.25);
+}
+/* Shown only after the participant has interacted (or tried to submit), never on load. */
+.jspsych-content input:user-invalid,
+.jspsych-content input[aria-invalid="true"] {
+  border-color: var(--c-error-line);
+  border-width: 3px;
+  background: var(--c-error-tint);
+}
+
+/* Inline error message under a field. */
+.field-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45em;
+  color: var(--c-error);
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0.6em 0 0;
+}
+.field-error[hidden] { display: none; }
+.field-error::before {
+  content: "!";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1.3em;
+  height: 1.3em;
+  border-radius: 50%;
+  background: var(--c-error-line);
+  color: #ffffff;
+  font-size: 0.85em;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------------------
+ * Consent
+ * ------------------------------------------------------------------------- */
+.consent { font-size: 17px; line-height: 1.65; }
+.consent .buttons { text-align: center; }
+
+/* ---------------------------------------------------------------------------
+ * Sentence-formation task
+ * ------------------------------------------------------------------------- */
 #jspsych-survey-html-form { text-align: center; }
+.sentence-set { text-align: center; }
+.sentence-count {
+  display: inline-block;
+  color: var(--c-muted);
+  background: #eef1f4;
+  border-radius: 999px;
+  padding: 2px 14px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.sentence-words {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  word-spacing: 0.35em;
+  margin: 0.6em 0 0.8em;
+  padding: 0.5em 0.75em;
+  background: var(--c-primary-tint);
+  border-radius: var(--radius);
+}
+.sentence-set input[type="text"] { width: 100%; font-size: 20px; padding: 12px 14px; }
+
+/* ---------------------------------------------------------------------------
+ * Evaluation sheet (styling only; its wording and rows are set in experiment.js)
+ * ------------------------------------------------------------------------- */
+.feedback-sheet { font-size: 17px; }
+.feedback-sheet h2 { margin-bottom: 0.4em; }
+.feedback-sheet p { text-align: center; }
+.feedback-sheet table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.8em 0 0.4em;
+  font-size: 16px;
+  line-height: 1.3;
+}
+.feedback-sheet th,
+.feedback-sheet td { border: 1px solid var(--c-line); padding: 5px 10px; text-align: center; }
+.feedback-sheet th { background: #eef1f4; font-weight: 700; }
+.feedback-sheet td:last-child { text-align: left; }
+.feedback-sheet .own-row td { background: var(--c-primary-tint); padding: 8px 10px; font-weight: 700; }
+.feedback-sheet input[type="number"] { width: 4.5em; font-size: 17px; padding: 6px 8px; text-align: center; }
+.feedback-sheet input[type="text"] { width: 100%; font-size: 17px; padding: 6px 8px; }
+
+/* ---------------------------------------------------------------------------
+ * SurveyJS pages (power-prime essay, suspicion, demographics)
+ * The plugin sets its theme as inline variables, so these overrides need !important.
+ * ------------------------------------------------------------------------- */
+.jspsych-content .sd-root-modern {
+  --sjs-primary-backcolor: #0072b2 !important;
+  --sjs-primary-backcolor-dark: #005a8c !important;
+  --sjs-primary-backcolor-light: rgba(0, 114, 178, 0.1) !important;
+  --sjs-special-red: #a84a00 !important;
+  --sjs-special-red-light: rgba(213, 94, 0, 0.1) !important;
+  --sjs-general-forecolor: #1f2933 !important;
+  --sjs-general-forecolor-light: #52606d !important;
+  --sjs-font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Open Sans", Arial, sans-serif !important;
+  --sjs-font-size: 18px !important;
+  background: transparent;
+}
+/* Fit the survey to the card: the plugin gives its container an inline 800px minimum width
+   and SurveyJS adds its own page margins, which pushed the questions out of the card. */
+.jspsych-content .jspsych-survey-container { width: 100% !important; min-width: 0 !important; max-width: 100%; }
+/* Lighter question panels, since the card already frames the page. */
+.jspsych-content .sd-root-modern .sd-element--with-frame {
+  box-shadow: none !important;
+  border: 1px solid var(--c-line);
+  border-radius: 8px !important;
+  padding: 20px 24px 24px !important;
+}
+.jspsych-content .sd-root-modern .sd-row { margin-top: 16px !important; }
+.jspsych-content .sd-root-modern .sd-page__row:first-child { margin-top: 0 !important; }
+.jspsych-content .sd-root-modern .sd-body { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+.jspsych-content .sd-root-modern .sd-page { padding: 0 !important; }
+.jspsych-content .sd-root-modern .sd-body__navigation { padding: 16px 0 0 !important; justify-content: center; }
+.jspsych-content .sd-question__title { font-size: 19px; line-height: 1.55; }
+.jspsych-content .sd-comment,
+.jspsych-content .sd-input { font-size: 18px; line-height: 1.55; }
+.jspsych-content .sd-comment:focus { box-shadow: 0 0 0 3px var(--c-primary); }
+/* Error messages: vermillion text with a border, so they are not colour-only. */
+.jspsych-content .sd-question__erbox {
+  color: var(--c-error) !important;
+  background: var(--c-error-tint) !important;
+  box-shadow: inset 6px 0 0 var(--c-error-line) !important; /* a border would sit outside the frame */
+  padding: 10px 16px 10px 22px !important;
+}
+.jspsych-content .sd-question__erbox .sd-error__item {
+  font-size: 17px !important;
+  line-height: 1.4 !important;
+  font-weight: 600 !important;
+}
+.jspsych-content .sd-question__erbox .sd-error__item::before { content: "⚠\00a0"; }
+.jspsych-content .sd-question--error .sd-comment,
+.jspsych-content .sd-question--error .sd-input { box-shadow: 0 0 0 2px var(--c-error-line); }
+/* The Continue button matches the jsPsych buttons. */
+.jspsych-content .sd-navigation__complete-btn,
+.jspsych-content .sd-navigation__next-btn {
+  font-family: inherit !important;
+  font-size: 17px !important;
+  font-weight: 600 !important;
+  min-height: 48px;
+  min-width: 140px;
+  padding: 12px 28px !important;
+  color: #ffffff !important;
+  background: var(--c-primary) !important;
+  border: 2px solid var(--c-primary) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+.jspsych-content .sd-navigation__complete-btn:hover,
+.jspsych-content .sd-navigation__next-btn:hover { background: var(--c-primary-dark) !important; }
+.jspsych-content .sd-navigation__complete-btn:focus-visible,
+.jspsych-content .sd-navigation__next-btn:focus-visible { box-shadow: var(--focus-ring) !important; }
+
+/* Live character counter under the power-prime essay (text set in experiment.js; a ✓ in the
+   text, not colour, marks the minimum as reached). */
+.jspsych-content [data-name="essay"] .sd-question__description {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--c-muted);
+  margin-top: 0.5em;
+  text-align: right;
+}
+
+/* ---------------------------------------------------------------------------
+ * Placeholders still to be written (visible on purpose)
+ * ------------------------------------------------------------------------- */
+.todo {
+  background: #fff6e0;
+  border: 2px dashed var(--c-todo);
+  border-radius: 6px;
+  padding: 0.5em 0.75em;
+}
+
+/* ---------------------------------------------------------------------------
+ * Smaller laptop screens
+ * ------------------------------------------------------------------------- */
+@media (max-width: 900px), (max-height: 760px) {
+  .jspsych-display-element { font-size: 18px; }
+  .jspsych-content { padding: 24px 28px; }
+  .jspsych-content-wrapper { padding-top: 16px; }
+  .sentence-words { font-size: 30px; }
+}

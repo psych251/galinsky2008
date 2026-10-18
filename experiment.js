@@ -217,16 +217,22 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
       "power—what happened, how you felt, etc.",
   };
   const PRIME_MIN_CHARS = 200;
+  const essayCounterText = (n) =>
+    n >= PRIME_MIN_CHARS
+      ? `✓ ${n} characters (minimum of ${PRIME_MIN_CHARS} reached)`
+      : `${n} / ${PRIME_MIN_CHARS} characters minimum`;
   const powerPrime = {
     timeline: [{
       type: jsPsychSurvey,
       survey_json: () => ({
         showQuestionNumbers: "off",
         completeText: "Continue",
+        textUpdateMode: "onTyping", // so the character counter updates on every keystroke
         pages: [{
           elements: [{
             type: "comment", name: "essay", rows: 14, autoGrow: true,
             title: PRIME_INSTRUCTIONS[prime],
+            description: essayCounterText(0), descriptionLocation: "underInput",
             isRequired: true,
             requiredErrorText: `Please write at least ${PRIME_MIN_CHARS} characters.`,
             validators: [{ type: "text", minLength: PRIME_MIN_CHARS,
@@ -234,6 +240,13 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
           }],
         }],
       }),
+      // Live character counter, shown under the text box.
+      survey_function: (survey) => {
+        const essay = survey.getQuestionByName("essay");
+        survey.onValueChanged.add(() => {
+          essay.description = essayCounterText((essay.value || "").length);
+        });
+      },
       data: { task: "power_prime" },
       on_finish: (data) => {
         data.essay = data.response.essay;
@@ -286,7 +299,9 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
         <p class="sentence-count">Set ${jsPsych.evaluateTimelineVariable("set_number")} of ${SENTENCE_SETS.length}</p>
         <p class="sentence-words">${jsPsych.evaluateTimelineVariable("words")}</p>
         <p><input type="text" id="sentence" name="sentence" required pattern=".*\\S.*"
-          title="Please type a sentence." autocomplete="off" spellcheck="false"></p>
+          title="Please type a sentence." autocomplete="off" spellcheck="false"
+          aria-describedby="sentence-error"></p>
+        <p class="field-error" id="sentence-error" role="alert" hidden>Please type a sentence.</p>
       </div>`,
     autofocus: "sentence",
     data: {
@@ -297,6 +312,21 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
     // Wall-clock time the words appeared and the sentence was submitted (rt is the difference).
     on_load: () => {
       sentenceOnset = new Date().toISOString();
+      // Show an inline message instead of the browser's tooltip when the box is empty.
+      const input = document.getElementById("sentence");
+      const error = document.getElementById("sentence-error");
+      input.addEventListener("invalid", (e) => {
+        e.preventDefault();
+        error.hidden = false;
+        input.setAttribute("aria-invalid", "true");
+        input.focus();
+      });
+      input.addEventListener("input", () => {
+        if (input.validity.valid) {
+          error.hidden = true;
+          input.removeAttribute("aria-invalid");
+        }
+      });
     },
     on_finish: (data) => {
       data.sentence = data.response.sentence;

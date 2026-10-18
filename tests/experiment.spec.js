@@ -32,10 +32,14 @@ async function runThroughExperiment(page, { stopBeforeFinish = false } = {}) {
   // 3. power prime, conditions 1 and 2 only: a short essay is refused, a long one accepted
   if (condition === 1 || condition === 2) {
     const essay = page.locator("textarea");
+    const counter = page.locator('[data-name="essay"] .sd-question__description');
+    await expect(counter).toHaveText("0 / 200 characters minimum");
     await essay.fill("Too short.");
+    await expect(counter).toHaveText("10 / 200 characters minimum");
     await page.locator('input[value="Continue"]').click();
     await expect(page.getByText("Please write at least 200 characters.").first()).toBeVisible();
     await essay.fill(LONG_ESSAY);
+    await expect(counter).toContainText(`✓ ${LONG_ESSAY.length} characters`);
     await page.locator('input[value="Continue"]').click();
   }
   // 4. sentence task: one instructions page, then 20 sets
@@ -47,6 +51,9 @@ async function runThroughExperiment(page, { stopBeforeFinish = false } = {}) {
       // An empty sentence is refused and the set stays on screen.
       await page.locator("#jspsych-survey-html-form-next").click();
       await expect(set).toBeVisible();
+      await expect(page.locator("#sentence-error")).toBeVisible();
+      await page.locator("#sentence").fill("x");
+      await expect(page.locator("#sentence-error")).toBeHidden();
     }
     await page.locator("#sentence").fill(robotSentence(i));
     await page.locator("#jspsych-survey-html-form-next").click();
