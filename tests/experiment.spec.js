@@ -84,8 +84,9 @@ async function runThroughExperiment(page, { stopBeforeFinish = false, declineEss
   await sheet.locator('input[name="enjoyable"]').fill("4");
   await sheet.locator('input[name="comments"]').fill("robot comment");
   await page.locator("#jspsych-survey-html-form-next").click();
-  // 6. suspicion
-  await page.locator("textarea").fill("Robot suspects nothing.");
+  // 6. suspicion (two optional free-text questions)
+  await page.locator('[data-name="suspicion_purpose"] textarea').fill("Robot thinks it was about sentences.");
+  await page.locator('[data-name="suspicion_strange"] textarea').fill("Robot suspects nothing.");
   await page.locator('input[value="Continue"]').click();
   // 7. demographics (SurveyJS)
   await page.locator('input[type="number"]').fill("34");
@@ -241,7 +242,8 @@ test.describe("experiment", () => {
       expect(evalRow.rows_shown).toBe(expected.sheet === "feedback" ? 10 : 0);
 
       const susp = trials.find((t) => t.task === "suspicion");
-      expect(susp.response.suspicion).toBe("Robot suspects nothing.");
+      expect(susp.response.suspicion_purpose).toBe("Robot thinks it was about sentences.");
+      expect(susp.response.suspicion_strange).toBe("Robot suspects nothing.");
       const demo = trials.find((t) => t.task === "demographics");
       expect(demo.response.age).toBe(34);
 

@@ -40,7 +40,7 @@ const EXPERIMENT = {
   prolific_completion_code: "",
 
   // Contact shown in consent and debrief.
-  contact_email: "rcreppy@stanford.edu",
+  contact_email: "stanfordpsych251@gmail.com",
 
   // Does this study need a physical keyboard? There are no key-press trials here, but the
   // power essay and the 20 sentences are a lot of typing, so phones and tablets are turned
@@ -423,8 +423,10 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
       completeText: "Continue",
       pages: [{
         elements: [
-          // TODO: suspicion question wording (add more questions here if needed).
-          { type: "comment", name: "suspicion", title: "TODO: suspicion question.", rows: 4 },
+          // Written stand-in for the original's debriefing interview, where suspicious
+          // participants were identified. Asked after the ratings, before anything is revealed.
+          { type: "comment", name: "suspicion_purpose", title: "What do you think this study was about?", rows: 4 },
+          { type: "comment", name: "suspicion_strange", title: "Did anything about the study seem strange or unusual? If so, what?", rows: 4 },
         ],
       }],
     },
@@ -441,7 +443,6 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
       completeText: "Continue",
       pages: [
         {
-          // TODO: these are the template's placeholder items; replace with the ones you need.
           elements: [
             // The consent text promises participants may decline any question, so nothing here is required.
             { type: "text", name: "age", title: "How old are you?", inputType: "number", min: 18, max: 120 },
