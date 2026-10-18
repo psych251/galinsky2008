@@ -1,20 +1,19 @@
 /*
- * Psych 251 experiment template: demo experiment.
+ * Replication of Galinsky, Magee, Gruenfeld, Whitson & Liljenquist (2008), Experiment 3:
+ * power and conformity to others' evaluations of a boring task.
  *
- * This file is the one you edit. It builds a jsPsych 8 timeline and wires it to DataSaver
- * (src/save.js), which writes to your Firebase project. Everything below is a working
- * example you can replace piece by piece:
- *
- *   1. consent           course-wide consent text (required at the start of every study)
- *   2. instructions
- *   3. demographics      a multi-question survey page (jsPsych "survey" plugin, SurveyJS)
- *   4. framing task      a between-subjects manipulation with random assignment
- *   5. lexical decision  a short keyboard reaction-time block (trial-level data)
- *   6. feedback          Likert + free text
- *   7. debrief           saves data, then shows thanks or redirects to Prolific
- *
- * The example manipulation is the classic "Asian disease" framing problem
- * (Tversky & Kahneman, 1981): people are risk-averse for gains and risk-seeking for losses.
+ * Design
+ *   IV:      condition, between subjects, 4 levels (random assignment, see CONDITIONS):
+ *            1 high-power prime + feedback sheet, 2 low-power prime + feedback sheet,
+ *            3 no prime + feedback sheet,         4 no prime + blank sheet.
+ *   DVs:     task "evaluation_sheet": `interesting` and `enjoyable` (1-11, null if blank),
+ *            plus `sheet_comment`. Feedback-sheet conditions see 10 previous (high) ratings.
+ *   Trials:  consent, welcome, power prime (conditions 1-2 only; `essay`, >= 200 chars),
+ *            task instructions, 20 sentence-formation sets in fixed order (task
+ *            "sentence_formation": `sentence`, `rt`, `onset_time`, `submit_time`),
+ *            evaluation sheet, suspicion, demographics, debrief. No time limits.
+ *   Random:  simple random assignment to the 4 conditions; no counterbalancing.
+ *   Checks:  none built in. Exclusions are defined in the report, not here.
  */
 
 // ---------------------------------------------------------------------------
@@ -25,7 +24,7 @@ window.TEMPLATE_VERSION = "0.1.0";
 const EXPERIMENT = {
   // Firestore path: experiments/<id>/participants/... Change it when you start a new study
   // so pilot data and real data never mix (e.g. "smith2016-pilot-a", "smith2016-final").
-  id: "framing-demo",
+  id: "galinsky2008-pilot-a",
 
   // Trials per Firestore write. 1 = save every trial the moment it finishes (dropouts leave
   // partial data). The free tier allows 20,000 writes/day: with 200 participants x 100 trials
@@ -41,12 +40,11 @@ const EXPERIMENT = {
   prolific_completion_code: "",
 
   // Contact shown in consent and debrief.
-  contact_email: "stanfordpsych251@gmail.com",
+  contact_email: "rcreppy@stanford.edu",
 
-  // Does this study need a physical keyboard? The demo does (the word task uses F and J).
-  // On a phone or tablet no keyboard appears, so a participant cannot answer those trials;
-  // they would time out silently and the session would still look complete. When true, such
-  // devices are turned away before consent. Set to false if your study is buttons/touch only.
+  // Does this study need a physical keyboard? There are no key-press trials here, but the
+  // power essay and the 20 sentences are a lot of typing, so phones and tablets are turned
+  // away before consent. Set to false to allow them.
   requires_keyboard: true,
 };
 
@@ -66,6 +64,8 @@ const CHUNK_SIZE = Number(URL_PARAMS.get("chunk_size")) || EXPERIMENT.chunk_size
 // Test-only: `?cc=CODE` sets a Prolific completion code during emulator runs, so the test
 // suite can check the screen a participant sees once you have set yours. Ignored in live runs.
 if (USE_EMULATOR && URL_PARAMS.get("cc")) EXPERIMENT.prolific_completion_code = URL_PARAMS.get("cc");
+// Test-only: `?condition=N` (1-4) forces the condition during emulator runs. Ignored in live runs.
+const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === URL_PARAMS.get("condition")) : undefined;
 
 // ---------------------------------------------------------------------------
 // Boot: connect the saver first so even a crash in the first trial gets logged.
@@ -143,12 +143,21 @@ if (USE_EMULATOR && URL_PARAMS.get("cc")) EXPERIMENT.prolific_completion_code = 
     experiment_id: EXPERIMENT.id,
   });
 
-  // Random assignment to a between-subjects condition, recorded on every trial and on the
-  // participant document. (For exact counterbalancing you would need a server; random
-  // assignment is fine at course sample sizes.)
-  const condition = jsPsych.randomization.sampleWithoutReplacement(["gain", "loss"], 1)[0];
-  jsPsych.data.addProperties({ condition: condition });
-  saver.updateParticipant({ condition: condition });
+  // Random assignment to one of four between-subjects conditions, recorded on every trial and
+  // on the participant document. (For exact counterbalancing you would need a server; random
+  // assignment is fine at course sample sizes.) `condition` is the number 1-4; `prime` and
+  // `sheet` spell out its two components so the analysis never has to decode the number.
+  const CONDITIONS = {
+    1: { prime: "high_power", sheet: "feedback" },
+    2: { prime: "low_power", sheet: "feedback" },
+    3: { prime: "none", sheet: "feedback" },
+    4: { prime: "none", sheet: "blank" },
+  };
+  const condition = FORCED_CONDITION || jsPsych.randomization.sampleWithoutReplacement([1, 2, 3, 4], 1)[0];
+  const { prime, sheet } = CONDITIONS[condition];
+  jsPsych.data.addProperties({ condition: condition, prime: prime, sheet: sheet });
+  saver.updateParticipant({ condition: condition, prime: prime, sheet: sheet });
+  window.__condition = condition; // for the automated test
 
   // -------------------------------------------------------------------------
   // 1. Consent (course-wide IRB text; edit only the contact address)
@@ -179,23 +188,193 @@ if (USE_EMULATOR && URL_PARAMS.get("cc")) EXPERIMENT.prolific_completion_code = 
   };
 
   // -------------------------------------------------------------------------
-  // 2. Instructions
+  // 2. Welcome
   // -------------------------------------------------------------------------
-  const instructions = {
+  const welcome = {
     type: jsPsychInstructions,
     pages: [
+      // TODO: welcome text.
       `<h2>Welcome</h2>
-       <p>This short study has three parts: a few questions about you, one decision problem,
-       and a quick word task. It takes about three minutes.</p>`,
-      `<p>Please complete the study in one sitting, in a quiet place, on a laptop or desktop
-       computer. Use the buttons or the arrow keys to move between pages.</p>`,
+       <p class="todo">TODO: welcome text.</p>`,
+    ],
+    show_clickable_nav: true,
+    data: { task: "welcome" },
+  };
+
+  // -------------------------------------------------------------------------
+  // 3. Power prime (conditions 1 and 2 only): recall essay, at least 200 characters
+  // -------------------------------------------------------------------------
+  const PRIME_INSTRUCTIONS = {
+    high_power:
+      "Recall a particular incident in which you had power over another individual or individuals. " +
+      "By power, we mean a situation in which you controlled the ability of another person or persons " +
+      "to get something they wanted, or were in a position to evaluate those individuals. Please " +
+      "describe this situation in which you had power—what happened, how you felt, etc.",
+    low_power:
+      "Please recall a particular incident in which someone else had power over you. By power, we mean " +
+      "a situation in which someone had control over your ability to get something you wanted, or was " +
+      "in a position to evaluate you. Please describe this situation in which you did not have " +
+      "power—what happened, how you felt, etc.",
+  };
+  const PRIME_MIN_CHARS = 200;
+  const powerPrime = {
+    timeline: [{
+      type: jsPsychSurvey,
+      survey_json: () => ({
+        showQuestionNumbers: "off",
+        completeText: "Continue",
+        pages: [{
+          elements: [{
+            type: "comment", name: "essay", rows: 14, autoGrow: true,
+            title: PRIME_INSTRUCTIONS[prime],
+            isRequired: true,
+            requiredErrorText: `Please write at least ${PRIME_MIN_CHARS} characters.`,
+            validators: [{ type: "text", minLength: PRIME_MIN_CHARS,
+              text: `Please write at least ${PRIME_MIN_CHARS} characters.` }],
+          }],
+        }],
+      }),
+      data: { task: "power_prime" },
+      on_finish: (data) => {
+        data.essay = data.response.essay;
+        data.essay_chars = data.essay.length;
+      },
+    }],
+    conditional_function: () => prime !== "none",
+  };
+
+  // -------------------------------------------------------------------------
+  // 4. Sentence formation: 20 sets of five words in fixed order; type a sentence using four
+  // -------------------------------------------------------------------------
+  const sentenceInstructions = {
+    type: jsPsychInstructions,
+    pages: [
+      // TODO: task instructions for the sentence-formation task.
+      `<h2>Sentence task</h2>
+       <p class="todo">TODO: task instructions.</p>`,
     ],
     show_clickable_nav: true,
     data: { task: "instructions" },
   };
+  const SENTENCE_SETS = [
+    "dog the barked loudly yellow",
+    "she bread bought fresh Monday",
+    "rain falls the heavily soft",
+    "he coffee drinks hot green",
+    "children the played outside tall",
+    "window open the was wide",
+    "we dinner early ate lamp",
+    "birds sing every morning the",
+    "train the arrived late stone",
+    "I a letter wrote paper",
+    "garden the green grows slowly",
+    "river flows the south toward",
+    "he shoes new bought red",
+    "lamp the bright is table",
+    "they walked home the carefully",
+    "soup is the hot cold",
+    "she tall is very quietly",
+    "baker the bread bakes fresh",
+    "snow covered the hills wide",
+    "clock the ticks loudly wall",
+  ].map((words, i) => ({ set_number: i + 1, words: words }));
+  let sentenceOnset = null;
+  const sentenceTrial = {
+    type: jsPsychSurveyHtmlForm,
+    html: () => `
+      <div class="sentence-set" data-set="${jsPsych.evaluateTimelineVariable("set_number")}">
+        <p class="sentence-count">Set ${jsPsych.evaluateTimelineVariable("set_number")} of ${SENTENCE_SETS.length}</p>
+        <p class="sentence-words">${jsPsych.evaluateTimelineVariable("words")}</p>
+        <p><input type="text" id="sentence" name="sentence" required pattern=".*\\S.*"
+          title="Please type a sentence." autocomplete="off" spellcheck="false"></p>
+      </div>`,
+    autofocus: "sentence",
+    data: {
+      task: "sentence_formation",
+      set_number: jsPsych.timelineVariable("set_number"),
+      words: jsPsych.timelineVariable("words"),
+    },
+    // Wall-clock time the words appeared and the sentence was submitted (rt is the difference).
+    on_load: () => {
+      sentenceOnset = new Date().toISOString();
+    },
+    on_finish: (data) => {
+      data.sentence = data.response.sentence;
+      data.onset_time = sentenceOnset;
+      data.submit_time = new Date().toISOString();
+    },
+  };
+  const sentenceTask = { timeline: [sentenceTrial], timeline_variables: SENTENCE_SETS };
 
   // -------------------------------------------------------------------------
-  // 3. Demographics (survey plugin: one page, several question types)
+  // 5. Evaluation sheet: "Pilot Task Participant Feedback"
+  // -------------------------------------------------------------------------
+  // The ten earlier "participants" shown above the participant's own row (row 29) in the
+  // feedback-sheet conditions (1-3). Condition 4 sees the same sheet with only row 29.
+  const PREVIOUS_FEEDBACK_ROWS = [
+    { participant: 19, interesting: 9, enjoyable: 10, comment: "" },
+    { participant: 20, interesting: 10, enjoyable: 9, comment: "cool task" },
+    { participant: 21, interesting: 11, enjoyable: 11, comment: "Fun, like a puzzle" },
+    { participant: 22, interesting: 9, enjoyable: 8, comment: "" },
+    { participant: 23, interesting: 10, enjoyable: 8, comment: "" },
+    { participant: 24, interesting: 9, enjoyable: 9, comment: "" },
+    { participant: 25, interesting: 11, enjoyable: 11, comment: "☺" }, // a smiley face
+    { participant: 26, interesting: 10, enjoyable: 9, comment: "" },
+    { participant: 27, interesting: 10, enjoyable: 11, comment: "Much better than the typical experiment" },
+    { participant: 28, interesting: 10, enjoyable: 10, comment: "" },
+  ];
+  const OWN_ROW_NUMBER = 29;
+  const shownRows = sheet === "feedback" ? PREVIOUS_FEEDBACK_ROWS : [];
+  const evaluationSheet = {
+    type: jsPsychSurveyHtmlForm,
+    html: `
+      <div class="feedback-sheet" data-rows-shown="${shownRows.length}">
+        <h2>Pilot Task Participant Feedback</h2>
+        <p>In the first two columns, please answer the questions ‘How interesting was this
+        experiment?’ and ‘Overall, how much did you enjoy this experiment?’ Mark from 1 to 11
+        (1 = not at all, 11 = extremely).</p>
+        <table>
+          <thead><tr><th>Participant</th><th>Interesting</th><th>Enjoyable</th><th>Comments</th></tr></thead>
+          <tbody>
+            ${shownRows.map((r) => `<tr class="previous-row"><td>${r.participant}</td><td>${r.interesting}</td><td>${r.enjoyable}</td><td>${r.comment}</td></tr>`).join("")}
+            <tr class="own-row">
+              <td>${OWN_ROW_NUMBER}</td>
+              <td><input type="number" name="interesting" min="1" max="11" step="1" aria-label="Interesting (1 to 11)"></td>
+              <td><input type="number" name="enjoyable" min="1" max="11" step="1" aria-label="Enjoyable (1 to 11)"></td>
+              <td><input type="text" name="comments" aria-label="Comments" autocomplete="off"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>`,
+    data: { task: "evaluation_sheet", rows_shown: shownRows.length, own_row: OWN_ROW_NUMBER },
+    on_finish: (data) => {
+      const toRating = (v) => (v === "" || v === undefined ? null : Number(v));
+      data.interesting = toRating(data.response.interesting);
+      data.enjoyable = toRating(data.response.enjoyable);
+      data.sheet_comment = data.response.comments || "";
+    },
+  };
+
+  // -------------------------------------------------------------------------
+  // 6. Suspicion
+  // -------------------------------------------------------------------------
+  const suspicion = {
+    type: jsPsychSurvey,
+    survey_json: {
+      showQuestionNumbers: "off",
+      completeText: "Continue",
+      pages: [{
+        elements: [
+          // TODO: suspicion question wording (add more questions here if needed).
+          { type: "comment", name: "suspicion", title: "TODO: suspicion question.", rows: 4 },
+        ],
+      }],
+    },
+    data: { task: "suspicion" },
+  };
+
+  // -------------------------------------------------------------------------
+  // 7. Demographics
   // -------------------------------------------------------------------------
   const demographics = {
     type: jsPsychSurvey,
@@ -204,6 +383,7 @@ if (USE_EMULATOR && URL_PARAMS.get("cc")) EXPERIMENT.prolific_completion_code = 
       completeText: "Continue",
       pages: [
         {
+          // TODO: these are the template's placeholder items; replace with the ones you need.
           elements: [
             // The consent text promises participants may decline any question, so nothing here is required.
             { type: "text", name: "age", title: "How old are you?", inputType: "number", min: 18, max: 120 },
@@ -220,133 +400,28 @@ if (USE_EMULATOR && URL_PARAMS.get("cc")) EXPERIMENT.prolific_completion_code = 
   };
 
   // -------------------------------------------------------------------------
-  // 4. Framing problem (between-subjects: gain vs loss frame)
-  // -------------------------------------------------------------------------
-  const framingText = {
-    gain: {
-      a: "If Program A is adopted, 200 people will be saved.",
-      b: "If Program B is adopted, there is a one-third probability that 600 people will be saved, and a two-thirds probability that no people will be saved.",
-    },
-    loss: {
-      a: "If Program A is adopted, 400 people will die.",
-      b: "If Program B is adopted, there is a one-third probability that nobody will die, and a two-thirds probability that 600 people will die.",
-    },
-  };
-  const framing = {
-    type: jsPsychHtmlButtonResponse,
-    stimulus: () => `
-      <div class="framing">
-        <p>Imagine that the country is preparing for the outbreak of an unusual disease, which is
-        expected to kill 600 people. Two alternative programs to combat the disease have been
-        proposed. Assume that the exact scientific estimates of the consequences of the programs
-        are as follows:</p>
-        <ul class="programs">
-          <li>${framingText[condition].a}</li>
-          <li>${framingText[condition].b}</li>
-        </ul>
-        <p>Which of the two programs would you favor?</p>
-      </div>`,
-    choices: ["Program A", "Program B"],
-    data: { task: "framing" },
-    on_finish: (data) => {
-      // Program A is the certain option in both frames; B is the risky gamble.
-      data.choice = data.response === 0 ? "certain" : "risky";
-    },
-  };
-
-  // -------------------------------------------------------------------------
-  // 5. Lexical decision (short RT block with trial-level logging)
-  // -------------------------------------------------------------------------
-  const ldInstructions = {
-    type: jsPsychInstructions,
-    pages: [
-      `<h2>Word task</h2>
-       <p>You will see a string of letters. Press <strong>F</strong> if it is a real English word
-       and <strong>J</strong> if it is not. Respond as quickly and accurately as you can.
-       Place your fingers on F and J now.</p>`,
-    ],
-    show_clickable_nav: true,
-    data: { task: "instructions" },
-  };
-  const ldItems = [
-    { word: "TABLE", is_word: true }, { word: "GARDEN", is_word: true },
-    { word: "PLANET", is_word: true }, { word: "SILVER", is_word: true },
-    { word: "FLIRP", is_word: false }, { word: "MANTOR", is_word: false },
-    { word: "BRENDLE", is_word: false }, { word: "TOSKIN", is_word: false },
-  ];
-  const fixation = {
-    type: jsPsychHtmlKeyboardResponse,
-    stimulus: '<div class="fixation">+</div>',
-    choices: "NO_KEYS",
-    trial_duration: 500,
-    data: { task: "fixation" },
-  };
-  const ldTrial = {
-    type: jsPsychHtmlKeyboardResponse,
-    stimulus: () => `<div class="stimulus">${jsPsych.evaluateTimelineVariable("word")}</div>`,
-    choices: ["f", "j"],
-    trial_duration: 3000,
-    data: {
-      task: "lexical_decision",
-      word: jsPsych.timelineVariable("word"),
-      is_word: jsPsych.timelineVariable("is_word"),
-    },
-    on_finish: (data) => {
-      const expected = data.is_word ? "f" : "j";
-      data.correct = data.response === expected;
-      data.timed_out = data.response === null;
-    },
-  };
-  const lexicalDecision = {
-    timeline: [fixation, ldTrial],
-    timeline_variables: ldItems,
-    randomize_order: true,
-  };
-
-  // -------------------------------------------------------------------------
-  // 6. Feedback
-  // -------------------------------------------------------------------------
-  const feedback = {
-    type: jsPsychSurveyLikert,
-    questions: [
-      {
-        prompt: "How clear were the instructions?", name: "instructions_clear", required: false,
-        labels: ["Very unclear", "Unclear", "Neutral", "Clear", "Very clear"],
-      },
-    ],
-    data: { task: "feedback_likert" },
-  };
-  const comments = {
-    type: jsPsychSurveyText,
-    questions: [{ prompt: "Any comments about the study? (optional)", name: "comments", rows: 4 }],
-    data: { task: "feedback_text" },
-  };
-
-  // -------------------------------------------------------------------------
-  // 7. Debrief
+  // 8. Debrief
   // -------------------------------------------------------------------------
   const debrief = {
     type: jsPsychHtmlButtonResponse,
+    // TODO: debrief text.
     stimulus: `
       <h2>Debrief</h2>
-      <p>Thank you. In this study we tested whether describing the same outcomes as lives saved or
-      as lives lost changes which program people choose. Different participants saw different
-      wordings. If you have questions about this research, contact
-      <a href="mailto:${EXPERIMENT.contact_email}">${EXPERIMENT.contact_email}</a>.
-      Press the button to save your responses and finish.</p>`,
+      <p class="todo">TODO: debrief text.</p>
+      <p>Press the button to save your responses and finish.</p>`,
     choices: ["Finish"],
     data: { task: "debrief" },
   };
 
   await jsPsych.run([
     consent,
-    instructions,
+    welcome,
+    powerPrime,
+    sentenceInstructions,
+    sentenceTask,
+    evaluationSheet,
+    suspicion,
     demographics,
-    framing,
-    ldInstructions,
-    lexicalDecision,
-    feedback,
-    comments,
     debrief,
   ]);
 })();

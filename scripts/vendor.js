@@ -17,6 +17,7 @@ const copies = [
   ["@jspsych/plugin-survey/css/survey.css", "plugin-survey.css"],
   ["@jspsych/plugin-survey-likert/dist/index.browser.min.js", "plugin-survey-likert.js"],
   ["@jspsych/plugin-survey-text/dist/index.browser.min.js", "plugin-survey-text.js"],
+  ["@jspsych/plugin-survey-html-form/dist/index.browser.min.js", "plugin-survey-html-form.js"],
 ];
 
 const versions = {};

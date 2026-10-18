@@ -9,3 +9,14 @@
 .framing .programs { margin: 1em 0; padding-left: 1.2em; }
 #jspsych-html-button-response-btngroup { text-align: center; }
 .thanks { text-align: center; }
+.todo { background: #fff3c4; border: 1px dashed #c9a400; padding: 0.4em 0.6em; }
+.sentence-set { text-align: center; }
+.sentence-count { color: #666; font-size: 14px; }
+.sentence-words { font-size: 28px; letter-spacing: 0.04em; margin: 0.8em 0; }
+.sentence-set input[type="text"] { width: 90%; font-size: 18px; padding: 6px; }
+.feedback-sheet table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+.feedback-sheet th, .feedback-sheet td { border: 1px solid #999; padding: 4px 8px; text-align: center; }
+.feedback-sheet td:last-child { text-align: left; }
+.feedback-sheet input[type="number"] { width: 4em; font-size: 16px; }
+.feedback-sheet input[type="text"] { width: 100%; box-sizing: border-box; font-size: 16px; }
+#jspsych-survey-html-form { text-align: center; }
