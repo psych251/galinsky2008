@@ -30,6 +30,7 @@ async function runThroughExperiment(page, { stopBeforeFinish = false, declineEss
   await page.getByRole("button", { name: "I agree to participate" }).click();
   const condition = await page.evaluate(() => window.__condition);
   // 2. welcome (one page)
+  await expect(page.getByText("Some will ask about your perceptions", { exact: false })).toBeVisible();
   await page.locator("#jspsych-instructions-next").click();
   // 3. power prime, conditions 1 and 2 only: a short essay is refused, a long one accepted
   if (condition === 1 || condition === 2) {
@@ -50,7 +51,8 @@ async function runThroughExperiment(page, { stopBeforeFinish = false, declineEss
     }
     await page.locator('input[value="Continue"]').click();
   }
-  // 4. sentence task: one instructions page, then 20 sets
+  // 4. sentence task: one instructions page (pilot-test cover story), then 20 sets
+  await expect(page.getByText("psycholinguistic decision-making processes", { exact: false })).toBeVisible();
   await page.locator("#jspsych-instructions-next").click();
   for (let i = 1; i <= N_SENTENCE_SETS; i++) {
     const set = page.locator(`.sentence-set[data-set="${i}"]`);
@@ -91,9 +93,21 @@ async function runThroughExperiment(page, { stopBeforeFinish = false, declineEss
   // SurveyJS boolean switches render "Yes" twice once toggled; scope to the question.
   await page.locator('[data-name="native_english"]').getByText("Yes", { exact: true }).first().click();
   await page.locator('input[value="Continue"]').click();
-  // 8. debrief
+  // 8. debrief: the second paragraph depends on the condition
   const finish = page.getByRole("button", { name: "Finish" });
   await finish.waitFor({ state: "visible" });
+  const debrief = page.locator(".debrief");
+  const sawSheet = "You then saw a sheet that showed you what fellow participants thought";
+  const blankSheet = "Your sheet was left blank";
+  const highEssay = "describe a time when you had power over someone else";
+  const lowEssay = "describe a time when someone else had power over you";
+  const expected = {
+    1: [highEssay, sawSheet], 2: [lowEssay, sawSheet], 3: [sawSheet], 4: [blankSheet],
+  }[condition];
+  for (const text of [sawSheet, blankSheet, highEssay, lowEssay]) {
+    if (expected.includes(text)) await expect(debrief).toContainText(text);
+    else await expect(debrief).not.toContainText(text);
+  }
   if (stopBeforeFinish) return condition;
   await finish.click();
   await expect(page.getByText("All done")).toBeVisible({ timeout: 30000 });

@@ -87,7 +87,7 @@ body,
 #jspsych-progressbar-inner {
   background: var(--c-primary);
   border-radius: 999px;
-  transition: width 0.4s ease;
+  /* No width transition: it made the drawn bar lag well behind the real progress. */
 }
 
 /* ---------------------------------------------------------------------------
@@ -341,3 +341,6 @@ body,
 .decline label { display: inline-flex; align-items: center; gap: 0.5em; cursor: pointer; }
 .decline input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--c-primary); margin: 0; }
 .sentence-set input[type="text"]:disabled { background: #eef1f4; color: #7b8794; border-color: var(--c-line); }
+
+/* Debrief */
+.debrief .debrief-finish { text-align: center; font-weight: 600; margin-top: 1.4em; }

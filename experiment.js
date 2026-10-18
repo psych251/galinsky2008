@@ -193,9 +193,11 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
   const welcome = {
     type: jsPsychInstructions,
     pages: [
-      // TODO: welcome text.
+      // Cover story (original: participants were told they would complete several tasks, some
+      // asking about perceptions and some about recalling past experiences).
       `<h2>Welcome</h2>
-       <p class="todo">TODO: welcome text.</p>`,
+       <p>Welcome! In this study you will complete several tasks. Some will ask about your
+       perceptions, and some will ask you to recall past experiences.</p>`,
     ],
     show_clickable_nav: true,
     data: { task: "welcome" },
@@ -272,9 +274,14 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
   const sentenceInstructions = {
     type: jsPsychInstructions,
     pages: [
-      // TODO: task instructions for the sentence-formation task.
+      // Cover story for the evaluation sheet (original: the task was said to be pilot tested
+      // by other researchers, who wanted feedback), then the task instructions.
       `<h2>Sentence task</h2>
-       <p class="todo">TODO: task instructions.</p>`,
+       <p>The next task is pilot tested for possible inclusion in a future experiment on
+       psycholinguistic decision-making processes. Because it is only a pilot, researchers would
+       like your feedback, and afterwards you will be asked a few questions about what you thought
+       of the task.</p>
+       <p>On each screen you will see five words. Please type a sentence that uses four of them.</p>`,
     ],
     show_clickable_nav: true,
     data: { task: "instructions" },
@@ -453,13 +460,47 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
   // -------------------------------------------------------------------------
   // 8. Debrief
   // -------------------------------------------------------------------------
+  // The second paragraph depends on the condition: conditions 1-2 are told why they wrote the
+  // power essay, and condition 4 (blank sheet) is told what the other sheets showed.
+  const DEBRIEF_PRIME = {
+    high_power: "At the start of the study, you were asked to describe a time when you had power " +
+      "over someone else. This was to bring the experience of having power to mind before the " +
+      "sentence task. ",
+    low_power: "At the start of the study, you were asked to describe a time when someone else had " +
+      "power over you. This was to bring the experience of lacking power to mind before the " +
+      "sentence task. ",
+    none: "",
+  };
+  const DEBRIEF_SHEET = {
+    feedback: "Today you completed a task that asked you to create short sentences out of a small " +
+      "selection of words. You then saw a sheet that showed you what fellow participants thought of " +
+      "the task. However you were given some incomplete information - we are not collecting pilot " +
+      "data for a psycholinguistic decision-making task. The opinions you saw were created for this " +
+      "study and did not come from fellow participants. This allowed us to examine how you responded " +
+      "to differing opinions under controlled conditions.",
+    blank: "Today you completed a task that asked you to create short sentences out of a small " +
+      "selection of words, and then rated the task on a feedback sheet. However you were given some " +
+      "incomplete information - we are not collecting pilot data for a psycholinguistic " +
+      "decision-making task. Some participants saw ratings on their sheet that appeared to come from " +
+      "fellow participants; those ratings were created for this study. Your sheet was left blank so " +
+      "that we could compare how people rate the task with and without seeing others’ opinions.",
+  };
   const debrief = {
     type: jsPsychHtmlButtonResponse,
-    // TODO: debrief text.
     stimulus: `
-      <h2>Debrief</h2>
-      <p class="todo">TODO: debrief text.</p>
-      <p>Press the button to save your responses and finish.</p>`,
+      <div class="debrief">
+        <h2>Thank you for your contribution to science!</h2>
+        <p>Previous research suggests that power has an effect on our relationships with other
+        people, including abstract concepts like conformity and creativity. We are interested in how
+        having power affects the way you respond to others’ diverging thoughts and opinions.</p>
+        <p>${DEBRIEF_PRIME[prime]}${DEBRIEF_SHEET[sheet]} We did not reveal the study’s true purpose
+        beforehand because knowing what we were investigating could have influenced your responses.</p>
+        <p>You will receive $10 for your participation in this study. If you have any further
+        questions about this study, please contact
+        <a href="mailto:${EXPERIMENT.contact_email}">${EXPERIMENT.contact_email}</a>.</p>
+        <p>Thanks again for your participation!</p>
+        <p class="debrief-finish">Press the button to save your responses and finish.</p>
+      </div>`,
     choices: ["Finish"],
     data: { task: "debrief" },
   };
