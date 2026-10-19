@@ -436,23 +436,52 @@ criteria below" rather than "until the result is clear".
 
 ### Materials
 
-::: {.callout-tip icon=false}
-## Guidance
+Power Prime 
+The first task participants completed comprised the power manipulation, which was identical to the procedure used by Galinsky et al. (2003).Participants were asked to recall and write about a particular incident in their lives and\were given a sheet of paper with 19 lines to complete this task.Those participants assigned to the high-power condition were instructed:
 
-All materials. You can quote the original article directly: put the text in quotation marks
-and note that it was followed precisely, or quote it and point out the exceptions. Link to the
-live experiment above rather than pasting screenshots of every screen.
-:::
+  "Recall a particular incident in which you had power over another individual or individuals. 
+ By power, we mean  a situation in which you controlled the ability of another person or persons 
+ to get something they wanted, or were in a position to evaluate those individuals.
+ Please describe this situation in which you had power—what happened, how you felt, etc”
+ 
+ Those participants assigned to the low-power condition were instructed,
+ 
+ "Please recall a particular incident in which someone else had power
+ over you. By power, we mean a situation in which someone had
+ control over your ability to get something you wanted, or was in a
+ position to evaluate you. Please describe this situation in which you
+ did not have power—what happened, how you felt, etc.” 
+
+The power priming instructions were followed precisely in this replication.
+
+Link to study: https://psych251.github.io/galinsky2008/
+
+Evaluation Sheet 
+The feedback sheet ratings, comments, title, and directions were followed precisely in this replication.
+
+Other
+The conditions of the original study were followed, in addition to the task format, outcome (ratings), and the suspicion inclusion. 
+
+
 
 ### Procedure
 
-::: {.callout-tip icon=false}
-## Guidance
+Before the study starts: 
+Participants access the study though a Prolific link. They must be on a desktop or laptop (phones and tablets are turned away before consent).
+Participants are randomly assigned to a cognition when the experiment loads. They are unaware of what condition they are in. The conditions are as follows: 
+1. High-power condition, bogus evaluation sheet: asked about a time where power over another individual or individuals, saw bogus evaluation sheet of “previous participants” responses
 
-As for Materials: quote the original where you can and point out the exceptions. Describe the
-sequence a participant experiences, from consent to debrief, and how long it takes.
-:::
 
+2. Low-power condition, bogus evaluation sheet: asked about a time where someone else had power over them, saw evaluation sheet 
+3. Conformity baseline: no power prime, but see the evaluation sheet
+4. Attitude baseline: no power prime, no evaluation sheet 
+After the study starts: 
+First, participants see the online consent form. If they chose to participate, they proceed through the following: 
+In conditions 1 or 2 only),  participants typed a response to the autobiographical power priming question (200 character minimum recommended), and had an option to decline. They next saw a screen that explained that they were being asked to complete a sentence formation task for a pilot study looking at “psycholinguistic decision-making processes”. Participants completed 20 of these puzzles, and were shown 5 worlds on the screen and were asked to make a sentence with 4 of them (they could skip any individual prompt). 
+At the end of the study, participants saw a bogus participation evaluation sheet, which showed ten previous participants’ ratings and four comments, with the participant’s own row labeled 29  (in conditions 1 to 3). In condition 4, participants saw a blank evaluation sheet. The next screen screened for suspicion, and asked participants to type responses to these questions: 
+Next, participants completed a short demographic questionnaire and viewed the debrief form to complete the study. The estimated time to completion is around 11 minutes. 
+
+Link to study:https://psych251.github.io/galinsky2008/
 ### Analysis plan
 
 The original study computed a conformity index, the mean of how enjoyable & interesting participants, 1-11 ((α = .85). It reported t(38) using the error term from all 4 conditions as the key statistic. The authors did not state if they excluded participants for completion or missing consent, but they did state that they excluded 3 participants due to suspicion from the debriefing interview. It was unclear if participants in the in-person study opted out of the experiment. No covariates or effect sizes  were reported, and only the high and low power condition n’s were inferable (11 and 9). 
@@ -461,19 +490,10 @@ For the analysis plan for this replication, I kept the conformity index the same
 
 **Key analysis of interest.** High powered participants in the feedback sheet condition will rate the task less favorably compared to participants in the low-power in the feedback sheet condition, tested with a two-sided independent sample t-test with  α = .05 comparing the conformity indices (the mean of participants’ ratings of how interesting they thought the task was) between participants in the high and low powered conditions. The effect size is the difference in ratings (high-low), with a 95% confidence interval. 
 
-**Exclusions.** PParticipants were excluded due  suspicions about the experiments, incomplete ratings, and not completing the study.
+**Exclusions.** Participants were excluded due  suspicions about the experiments, incomplete ratings, and not completing the study.
 
 ### Differences from the original study
 
-::: {.callout-tip icon=false}
-## Guidance
-
-Every known difference in sample, setting, procedure, materials, and analysis, one per row.
-Minimizing differences is the goal, but some always remain. For each one, say whether it is
-expected to matter, based on claims in the original article or later research on when the
-effect does and does not appear. The rows below are the demo's real differences and show the
-level of detail expected; replace them with yours.
-:::
 
 | Aspect | Original study | This replication | Expected to matter? |
 |---|---|---|---|
