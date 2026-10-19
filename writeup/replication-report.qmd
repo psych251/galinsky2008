@@ -150,7 +150,8 @@ suspicion_codes <- function(dir, trials, complete) {
     filter(task == "suspicion", participant_id %in% complete$participant_id) |>
     mutate(resp = map(response, ~ if (is.na(.x) || .x == "") list() else fromJSON(.x))) |>
     transmute(participant_id,
-              purpose = map_chr(resp, ~ as.character(.x$suspicion_purpose %||% "")),
+              # Early Pilot A sessions had a single placeholder question saved as `suspicion`.
+              purpose = map_chr(resp, ~ as.character(.x$suspicion_purpose %||% .x$suspicion %||% "")),
               strange = map_chr(resp, ~ as.character(.x$suspicion_strange %||% "")))
   codes_path <- file.path(dir, "suspicion_codes.csv")
   key_path   <- file.path(dir, "suspicion_key.csv")
@@ -191,7 +192,13 @@ read_phase <- function(id) {
   errors_path  <- file.path(dir, "errors.csv")
   errors <- if (file.exists(errors_path)) read_csv(errors_path, show_col_types = FALSE) else tibble()
 
-  complete <- participants |> filter(completed)
+  # A session counts as complete only if the participant consented: declining consent ends
+  # the study at once, and the saver still marks that short session completed.
+  consent <- trials |> filter(task == "consent") |>
+    transmute(participant_id, consented = as.logical(consented)) |>
+    distinct(participant_id, .keep_all = TRUE)
+  participants <- participants |> left_join(consent, by = "participant_id")
+  complete <- participants |> filter(completed, consented %in% TRUE)
 
   # Conformity index, as in the original: the mean of the "interesting" and "enjoyable"
   # ratings on the evaluation sheet (1-11). Missing if either rating was left blank.
@@ -211,6 +218,7 @@ read_phase <- function(id) {
 
   list(participants = participants, trials = trials, errors = errors,
        complete = complete, keep = keep, analysed = analysed,
+       n_declined_consent = sum(participants$consented %in% FALSE),
        n_suspicious     = sum(checked$suspicious %in% TRUE),
        n_uncoded        = sum(is.na(checked$suspicious)),
        n_missing_rating = sum(is.na(keep$conformity)))
@@ -283,9 +291,10 @@ have_phase2 <- !is.null(phase2)
 ```{r}
 #| label: key-stats
 #| echo: false
-fmt_row <- function(study, r) {
+fmt_row <- function(study, r, collected = FALSE) {
   if (is.null(r)) {
-    return(tibble(Study = study, N = "", `Difference (high − low)` = "not yet collected",
+    return(tibble(Study = study, N = "",
+                  `Difference (high − low)` = if (collected) "too few analysed participants to compute" else "not yet collected",
                   `95% CI` = "", t = "", p = "", d = ""))
   }
   tibble(Study = study, N = as.character(r$N),
@@ -297,8 +306,8 @@ fmt_row <- function(study, r) {
 }
 bind_rows(
   fmt_row("Original", diff_ci(original)),
-  fmt_row("Phase 1: replication", if (have_data) diff_ci(condition_means(phase1))),
-  fmt_row("Phase 2: extension", if (have_phase2) diff_ci(condition_means(phase2)))
+  fmt_row("Phase 1: replication", if (have_data) diff_ci(condition_means(phase1)), collected = have_data),
+  fmt_row("Phase 2: extension", if (have_phase2) diff_ci(condition_means(phase2)), collected = have_phase2)
 ) |>
   knitr::kable(align = "lrlllrr",
                caption = "Key comparison: conformity index (mean of the interesting and enjoyable ratings, 1–11), high-power minus low-power condition, Student's t-test. N counts the two conditions compared. The original row is recomputed from the reported means, SDs and ns.")
@@ -443,27 +452,13 @@ sequence a participant experiences, from consent to debrief, and how long it tak
 
 ### Analysis plan
 
-::: {.callout-tip icon=false}
-## Guidance
+The original study computed a conformity index, the mean of how enjoyable & interesting participants, 1-11 ((α = .85). It reported t(38) using the error term from all 4 conditions as the key statistic. The authors did not state if they excluded participants for completion or missing consent, but they did state that they excluded 3 participants due to suspicion from the debriefing interview. It was unclear if participants in the in-person study opted out of the experiment. No covariates or effect sizes  were reported, and only the high and low power condition n’s were inferable (11 and 9). 
+For the analysis plan for this replication, I kept the conformity index the same as it was done in the paper.  I chose to drop missing ratings from the test if either was blank but this was not reported by the authors. I pre-registered the key statistical test as an independent samples two-group t-test, high vs low (df = n₁ + n₂ − 2). To comply with the student-guide.md, I excluded participants with missing consent and incomplete studies, and also excluded participants due to suspicion in alignment with the previous study. The suspicion exclusions were done via a free response question at the end of the study, which were coded blind to the condition. In alignment with the student-guide.md, I made declining the power priming essay an option that is reported instead of grounds to exclude a participant. 
 
-The analysis strategy, as close to the original as possible: data cleaning rules, exclusion
-rules, covariates, and the model or test. Original papers often do not spell this out; say
-where you had to make a choice and what you chose.
 
-**State the key analysis of interest explicitly.** That is the single test your replication
-stands or falls on, and it must match your preregistration. You can pre-specify additional
-analyses here too.
-:::
+**Key analysis of interest.** High powered participants in the feedback sheet condition will rate the task less favorably compared to participants in the low-power in the feedback sheet condition, tested with a two-sided independent sample t-test with  α = .05 comparing the conformity indices (the mean of participants’ ratings of how interesting they thought the task was) between participants in the high and low powered conditions. The effect size is the difference in ratings (high-low), with a 95% confidence interval. 
 
-**Key analysis of interest.** The proportion of participants choosing the risky program is
-higher in the loss frame than in the gain frame, tested with a chi-square test of independence
-on the 2 × 2 table of frame by choice. The effect size is the difference in the proportion
-choosing the risky program (loss minus gain), with a 95% confidence interval.
-
-**Exclusions.** Participants are excluded if they did not complete the study, if they answered
-no speeded trial at all (every lexical-decision trial timed out, the signature of a device
-without a keyboard), or if they answered fewer than 6 of the 8 lexical-decision trials
-correctly.
+**Exclusions.** PParticipants were excluded due  suspicions about the experiments, incomplete ratings, and not completing the study.
 
 ### Differences from the original study
 
@@ -479,12 +474,20 @@ level of detail expected; replace them with yours.
 
 | Aspect | Original study | This replication | Expected to matter? |
 |---|---|---|---|
-| Sample | University students in Stanford and British Columbia classrooms | Adults recruited on Prolific | Possibly. Framing effects have been found in both student and general samples, but their size varies across populations. |
-| Setting | Paper questionnaire in class | Online, unsupervised, on the participant's own computer | Unlikely for a single vignette, though attention may be lower online. |
-| Wording | "an unusual Asian disease" | "an unusual disease" | Unlikely. The ethnonym is incidental to the manipulation and dated. |
-| Design | Between subjects: each participant saw one frame | Between subjects, randomly assigned | No. |
-| Response | Circle a program on paper | Click a button | Unlikely. |
-| Other tasks | Problems presented alongside other questionnaire items | Followed by a short lexical-decision task used as an attention check | Unlikely: the check comes after the choice. |
+| Sample |45 undergraduate students | Adults recruited on Prolific | Possibly |
+| Setting | In-person in the lab, arriving in groups of 2-3, experimenter present | Online, unsupervised, on the participant's own computer |Possibly |
+| Cover story | explained aloud by experimenter | written on screen, in my own words | Unlikely, the main message is the same |
+| Power prime | written on paper, required number of lines | typed, at least 200 characters recommended | No, the main exercise is the same |
+| Sentence task | 20 word sentence task, method directly adapted from Epley and Gilovich (1999), set order was not specified  | 20 word task, no access  to original stimuli, used Claude to generate task with parameters from Epley and Gilovich (1999) | Unlikely. |
+| Evaluation sheet |handwritten paper sheet with bogus entries from "previous participants"|On-screen table; typed 1–11 ratings; row 25's smiley shown as ☺| Negligible, although conceptually the sheet has the same information
+Debrief  |in-person|written, varries by condtion (info about deception not used for particpants not in those conditions)| Negligible, although conceptually the sheet has the same information
+| Opt-out option |none | "I'd prefer not to answer" as an answer choice on esssay and sentences | Yes, it's possible participants will not complete the prime (IV) before seeing the evaluation sheet, which will nullify the experiment
+| Suspicion check |spoken debrief, 3 excluded | 2 written questions, coded blind to condition |Possibly, however I used the same paraphrased wording from the original study for the written questions
+| Key test |t(38) using error from all 4 conditions |Two-group Student's t (df = n₁ + n₂ − 2)|two-group version doesn’t depend on how many people end up in the baselines
+
+| Exclusions |only reported suspicion exclusions |declined consent/DNF,suspicious,missing rating (dropped from a test)   | Possibly, might lose more participants with these additional criteria 
+
+
 
 ### Methods addendum (post data collection)
 
@@ -530,12 +533,13 @@ analysed     <- phase1$analysed
 ```{r}
 #| label: funnel
 #| eval: !expr have_data
-funnel_levels <- c("Started", "Completed", "Not excluded for suspicion", "Analysed (both ratings given)")
+funnel_levels <- c("Started", "Consented", "Completed", "Not excluded for suspicion", "Analysed (both ratings given)")
 bind_rows(
   participants |> mutate(step = funnel_levels[1]),
-  complete     |> mutate(step = funnel_levels[2]),
-  keep         |> mutate(step = funnel_levels[3]),
-  analysed     |> mutate(step = funnel_levels[4])
+  participants |> filter(consented %in% TRUE) |> mutate(step = funnel_levels[2]),
+  complete     |> mutate(step = funnel_levels[3]),
+  keep         |> mutate(step = funnel_levels[4]),
+  analysed     |> mutate(step = funnel_levels[5])
 ) |>
   # Visitors turned away for using a phone or tablet were never assigned a condition.
   mutate(step = factor(step, levels = funnel_levels),
@@ -553,9 +557,9 @@ bind_rows(
 #| echo: false
 #| results: asis
 people <- function(n) sprintf(if (n == 1) "%d participant" else "%d participants", n)
-cat(sprintf("Of %s who started, %d completed the study. Excluded as suspicious: %s. Left at least one rating blank: %s. Analysed: %s.",
-            people(nrow(participants)), nrow(complete), people(phase1$n_suspicious),
-            people(phase1$n_missing_rating), people(nrow(analysed))))
+cat(sprintf("Of %s who started, %s declined consent and %d consented and completed the study. Excluded as suspicious: %s. Left at least one rating blank: %s. Analysed: %s.",
+            people(nrow(participants)), people(phase1$n_declined_consent), nrow(complete),
+            people(phase1$n_suspicious), people(phase1$n_missing_rating), people(nrow(analysed))))
 if (phase1$n_uncoded > 0) {
   cat(sprintf(" **%d completed participant(s) have not been coded for suspicion yet**, so they are included for now: fill in the `suspicious` column of `data/raw/%s/suspicion_codes.csv` and render again.",
               phase1$n_uncoded, experiment_id))
