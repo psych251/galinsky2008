@@ -263,7 +263,9 @@ comparison_plot <- function(...) {
     geom_point(position = dodge, size = 3) +
     geom_text(aes(y = 1.4, label = label), position = dodge, size = 2.8, colour = "grey30",
               show.legend = FALSE) +
-    scale_y_continuous(limits = c(1, 11), breaks = 1:11) +
+    # Clip the view, not the data, so a wide interval is cut at the axis instead of dropped.
+    scale_y_continuous(breaks = 1:11) +
+    coord_cartesian(ylim = c(1, 11)) +
     scale_colour_manual(values = setNames(study_colours[seq_along(studies)], names(studies))) +
     scale_shape_manual(values = setNames(study_shapes[seq_along(studies)], names(studies))) +
     labs(x = NULL, y = "Conformity index (1–11)", colour = NULL, shape = NULL) +
