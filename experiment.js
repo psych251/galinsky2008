@@ -501,7 +501,8 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
         having power affects the way you respond to others’ diverging thoughts and opinions.</p>
         <p>${DEBRIEF_PRIME[prime]}${DEBRIEF_SHEET[sheet]} We did not reveal the study’s true purpose
         beforehand because knowing what we were investigating could have influenced your responses.</p>
-        <p>You will receive $10 for your participation in this study. If you have any further
+        <p>You will be paid at a rate of $8 per hour for your participation in this study, and you
+        will receive your payment within a week of completing the study. If you have any further
         questions about this study, please contact
         <a href="mailto:${EXPERIMENT.contact_email}">${EXPERIMENT.contact_email}</a>.</p>
         <p>Thanks again for your participation!</p>

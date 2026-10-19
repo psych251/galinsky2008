@@ -105,6 +105,8 @@ async function runThroughExperiment(page, { stopBeforeFinish = false, declineEss
   const expected = {
     1: [highEssay, sawSheet], 2: [lowEssay, sawSheet], 3: [sawSheet], 4: [blankSheet],
   }[condition];
+  await expect(debrief).toContainText("$8 per hour");
+  await expect(debrief).toContainText("within a week of completing the study");
   for (const text of [sawSheet, blankSheet, highEssay, lowEssay]) {
     if (expected.includes(text)) await expect(debrief).toContainText(text);
     else await expect(debrief).not.toContainText(text);

@@ -86,3 +86,14 @@ coding participant data (suspicion coding is done by a human, blind to condition
   fix; full `npm test` 12 passed, including the test that desktop browsers are not turned away.
 - **Not changed:** no participant data was edited; neither phone visit completed, so neither
   was in the analysis set.
+
+### Sample size, cost, and debrief payment (commit below)
+- Added code to the report's power chunk (no prose changed): d33, the effect size the original
+  11 vs 9 design had 33% power to detect (0.72); n per group at d33 for 80/90/95% power
+  (32/42/51); planned analysed n (32 per group), 15% expected exclusions, n to recruit
+  (38 per group); Prolific cost for the two key conditions at $8/hour, 11 minutes and an
+  editable fee rate (placeholder 1/3, to be checked against Prolific's pricing).
+- **Checked by:** the power function agrees with R's `power.t.test` on equal groups; the
+  original design's power at d33 recomputes to 0.33; the report renders.
+- Debrief payment sentence changed from "$10" to the student's wording: $8 per hour, paid
+  within a week of completing the study. The robot now checks this text. `npm test`: 12 passed.
