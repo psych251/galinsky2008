@@ -93,30 +93,26 @@ bogus_mean <- 9.75
 :::
 
 # AI use statement
-I used ChatGPT to help me understand and clarify aspects of the original study (statistical analyses and conditions). I also used it to brainstorm a possible rescue/extension, especially with deception being the key manipulation. I did not use AI to generate or write the proposal text. 
 
-::: {.callout-tip icon=false}
-
-
-**Course policy: you write all of the text in this report yourself.** AI tools may help with
-code, and may comment on drafts you have written, but they may not write, rewrite or paraphrase
-any of the report's text. That includes "polishing" a paragraph.
-
-List every AI tool you used on this project, what you used it for, and how you checked what it
-produced. Include coding assistants (for example Claude Code, Codex, Copilot) and chat
-assistants. Name the model and version where you know it. "How you checked" is the important
-column: say what you verified yourself, not that the output "looked right". If you used no AI
-tools, replace the table with a sentence saying so.
-:::
 
 | Tool and model | What it was used for | How you checked the output |
 |---|---|---|
-| Claude Code (Claude Opus 5.5) | Implemented the experiment in `experiment.js` from my specification: the four conditions, power-prime essay, 20 sentence sets, evaluation sheet, suspicion questions, and the debrief and cover-story screens using my wording | Automated end-to-end test (`npm test`, 12 tests) playing all four conditions and checking every logged field; screenshots of every screen. *[Add your own checks, e.g. took the study myself; compared screens with the original materials.]* |
-| Claude Code (Claude Opus 5.5) | Restyled the participant pages (accessible colours, essay character counter, error messages) | `npm test`; screenshots at laptop and desktop sizes. *[Add your own checks.]* |
-| Claude Code (Claude Opus 5.5) | Checked the experiment against the consent text; added the "I'd prefer not to answer" option; kept essay text out of the shared data files | `npm test`; a test export searched for essay text, found only in the private `identifiers.csv`. *[Add your own checks.]* |
-| Claude Code (Claude Opus 5.5) | Fixed phones getting past the device check (diagnosed from a Pilot A error report) | A test reproducing the Pilot A phone, failing before the fix and passing after. *[Add your own checks.]* |
-| Claude Code (Claude Opus 5.5) | Wrote the analysis code in this report: original study's numbers, conformity index, Student's t-test, suspicion exclusion with a blind coding file, power analysis including d33, sample size and cost, figures | Report rendered with no data, with test data, and on Pilot A; the original's recomputed effect matched a hand calculation from the reported means, SDs and ns. *[Add your own checks, e.g. checked the original's numbers against the paper; confirmed the key test matches the preregistration.]* |
-| ChatGPT *[add the model, e.g. GPT-5, if you know it]* | I used ChatGPT to help me understand and clarify aspects of the original study (statistical analyses and conditions). I also used it to brainstorm a possible rescue/extension, especially with deception being the key manipulation. I did not use AI to generate or write the proposal text. | *[Add how you checked, e.g. checked its explanations of the analyses and conditions against the original paper.]* |
+| Claude Sonnet 5.5 | Explained the Firebase config, cloning the repo, installing Java, and terminal commands.
+| compared explanations against student-guide.md
+| Claude Sonnet 5.5 | Wrote the 20 placeholder sentence sets and the prompts you gave Claude Code.
+| compared against reference paper
+| Claude Sonnet 5.5 | Compared the template’s CLAUDE.md rules with mine
+| compared against example claude.md from TA-led class
+| Claude Sonnet 5.5 |Gave feedback on your debrief draft, and advice on exclusions and the suspicion check.
+| chose what feedback to incorporate, used guidelines from lecture
+| Claude Sonnet 5.5 | Computed the effect sizes and sample sizes above
+| used another  agent (chatGPT) to double check, also used online calculator 
+| Claude Code (Claude Opus 5.5) | Implemented the experiment in `experiment.js` from my specification: the four conditions, power-prime essay, 20 sentence sets, evaluation sheet, suspicion questions, and the debrief and cover-story screens using my wording | Automated end-to-end test (`npm test`, 12 tests) playing all four conditions and checking every logged field; screenshots of every screen. | did the study myself, checked agent against the student-guide.md
+| Claude Code (Claude Opus 5.5) | Restyled the participant pages (accessible colours, essay character counter, error messages) | `npm test`; screenshots at laptop and desktop sizes. | did the study myself 
+| Claude Code (Claude Opus 5.5) | Checked the experiment against the consent text; added the "I'd prefer not to answer" option; kept essay text out of the shared data files | `npm test`; a test export searched for essay text, found only in the private `identifiers.csv`.|did the study myself, checked agent against the student-guide.md
+| Claude Code (Claude Opus 5.5) | Fixed phones getting past the device check (diagnosed from a Pilot A error report) | A test reproducing the Pilot A phone, failing before the fix and passing after. | had a pilot A participant confirm this worked on their end
+| Claude Code (Claude Opus 5.5) | Wrote the analysis code in this report: original study's numbers, conformity index, Student's t-test, suspicion exclusion with a blind coding file, power analysis including d33, sample size and cost, figures | Report rendered with no data, with test data, and on Pilot A; the original's recomputed effect matched a hand calculation from the reported means, SDs and ns. |used another agent to double check, kept agent on track with details from the original study 
+| ChatGPT  | I used ChatGPT to help me understand and clarify aspects of the original study (statistical analyses and conditions). I also used it to brainstorm a possible rescue/extension, especially with deception being the key manipulation. I did not use AI to generate or write the proposal text. | checked its explanations of the analyses and conditions against the original paper|
 
 I wrote all of the text in this report myself. AI tools were not used to write, rewrite or
 paraphrase it, and were not used to generate, alter, or impute any participant data. I take full
@@ -330,20 +326,12 @@ The stimuli used in this study were a sentence formation task, autobiographical 
 ## Methods
 
 ### Power analysis
+The original paper did not report an effect size,  so I calculated it from the statistics reported from this experiment. I calculated that the original effect size was 0.96 (calculated from the high power condition(M = 8.68, SD = 1.03, n = 11) and the low power condition M = 9.55, SD = 0.73, n = 9)). For a two-sided independent sample t-test with  α = .05, detecting this effect required 19, 24, and 30 participants per group for 80%, 90%, and 95% power, respectively. 
+As this original effect could have been overestimated, I based the planned sample size on d =0.72, which meant that the original groups would have had to detect approximately 33% power.  A power analysis indicated that 32 participants per group would provide 80% power to detect this effect, so I plan to have 32 participants in each of the high and low power conditions with bogus evaluation sheets (64 across both conditions).  
+Assuming that some participants (about 15% estimated) will be excluded due to suspicions about the experiments (as in the original study) or due to declining to complete the power priming, or incomplete ratings, I divided 32 by 0.85 for a recruitment target of 38 participants per condition, or 76 in total. 
+At 8 dollars per hour and an estimated completion time of 11 mins, I budgeted paying ~1.47/ participant (approximately $223.44 total for participants across all 4 conditions).
 
-::: {.callout-tip icon=false}
-## Guidance
 
-Report the original effect size, the sample needed for 80%, 90% and 95% power to detect it,
-and the sample you chose and why. The table below is computed from the original study's
-numbers entered at the top of this file.
-
-Original effects are usually overestimates, so powering to the original effect tends to
-produce an underpowered replication. One widely used alternative is to collect 2.5 times the
-original sample, which gives 80% power to detect an effect the original study had only 33%
-power to detect (Simonsohn, 2015; Experimentology §10.4). Say which approach you used, and
-what the course's participant budget allowed.
-:::
 
 ```{r}
 #| label: power
@@ -424,15 +412,9 @@ For comparison, 2.5 times the original sample would be `r two_and_half[1]` in th
 and `r two_and_half[2]` in the loss frame (`r sum(two_and_half)` in total).
 
 ### Planned sample
+The planned sample is US residents on Prolific, who are fluent in English, and aged 18 or older. Data will be collected until each key condition has 32 people who pass the exclusions.
 
-::: {.callout-tip icon=false}
-## Guidance
 
-Planned sample size and stopping rule, sampling frame (for example, "US residents on Prolific,
-fluent in English, 18 or older"), known demographics, and any preselection or screening. The
-stopping rule should be data-independent: "collect until N participants pass the exclusion
-criteria below" rather than "until the result is clear".
-:::
 
 ### Materials
 
@@ -469,12 +451,12 @@ The conditions of the original study were followed, in addition to the task form
 Before the study starts: 
 Participants access the study though a Prolific link. They must be on a desktop or laptop (phones and tablets are turned away before consent).
 Participants are randomly assigned to a cognition when the experiment loads. They are unaware of what condition they are in. The conditions are as follows: 
+
 1. High-power condition, bogus evaluation sheet: asked about a time where power over another individual or individuals, saw bogus evaluation sheet of “previous participants” responses
-
-
 2. Low-power condition, bogus evaluation sheet: asked about a time where someone else had power over them, saw evaluation sheet 
 3. Conformity baseline: no power prime, but see the evaluation sheet
 4. Attitude baseline: no power prime, no evaluation sheet 
+
 After the study starts: 
 First, participants see the online consent form. If they chose to participate, they proceed through the following: 
 In conditions 1 or 2 only),  participants typed a response to the autobiographical power priming question (200 character minimum recommended), and had an option to decline. They next saw a screen that explained that they were being asked to complete a sentence formation task for a pilot study looking at “psycholinguistic decision-making processes”. Participants completed 20 of these puzzles, and were shown 5 worlds on the screen and were asked to make a sentence with 4 of them (they could skip any individual prompt). 
