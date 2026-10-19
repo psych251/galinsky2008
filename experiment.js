@@ -48,11 +48,16 @@ const EXPERIMENT = {
   requires_keyboard: true,
 };
 
-// True on anything with a mouse, trackpad, or stylus, including laptops with touchscreens.
-// False on phones and tablets without a pointing device, which are also the devices with no
-// physical keyboard. See docs/student-guide.md "Devices".
-function hasFinePointer() {
-  return !!(window.matchMedia && window.matchMedia("(any-pointer: fine)").matches);
+// True on a laptop or desktop: the *primary* pointer is a mouse or trackpad (so laptops with
+// touchscreens still pass), and the browser does not say it is a phone. Checking only for any
+// fine pointer let an Android phone through in Pilot A: some report a fine pointer (e.g. a
+// stylus) even though the touchscreen is primary. See docs/student-guide.md "Devices".
+function isComputer() {
+  const primaryFine = !!(window.matchMedia && window.matchMedia("(pointer: fine)").matches);
+  const ua = navigator.userAgent || "";
+  const mobile = (navigator.userAgentData && navigator.userAgentData.mobile === true) ||
+    /Mobi|iPhone|iPod|Android/i.test(ua);
+  return primaryFine && !mobile;
 }
 
 // `?emulator=1` in the URL sends data to the local emulator instead of the real project.
@@ -71,7 +76,7 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
 // Boot: connect the saver first so even a crash in the first trial gets logged.
 // ---------------------------------------------------------------------------
 (async function main() {
-  const deviceSupported = !EXPERIMENT.requires_keyboard || hasFinePointer();
+  const deviceSupported = !EXPERIMENT.requires_keyboard || isComputer();
 
   const saver = await DataSaver.init({
     experiment_id: EXPERIMENT.id,

@@ -263,9 +263,7 @@ comparison_plot <- function(...) {
     geom_point(position = dodge, size = 3) +
     geom_text(aes(y = 1.4, label = label), position = dodge, size = 2.8, colour = "grey30",
               show.legend = FALSE) +
-    # Clip the view, not the data, so a wide interval is cut at the axis instead of dropped.
-    scale_y_continuous(breaks = 1:11) +
-    coord_cartesian(ylim = c(1, 11)) +
+    scale_y_continuous(limits = c(1, 11), breaks = 1:11) +
     scale_colour_manual(values = setNames(study_colours[seq_along(studies)], names(studies))) +
     scale_shape_manual(values = setNames(study_shapes[seq_along(studies)], names(studies))) +
     labs(x = NULL, y = "Conformity index (1–11)", colour = NULL, shape = NULL) +
@@ -313,14 +311,7 @@ I am broadly interested in how children understand social hierarchy, particularl
 
 The stimuli used in this study were a sentence formation task, autobiographical power-priming instructions, and (bogus) previous participation evaluation sheets. The key statistical test that I preregistered was an independent-samples t-test comparing the conformity means of the high-power and low-power conditions. Since the original study was done in-person, one challenge I might face is replicating the conformity manipulation, since it relies on deception. Online participants might be more skeptical of bots, especially with the bogus evaluation sheets. One rescue measure I could take would be to come up with a cover story to make this more convincing for participants. 
 
-::: {.callout-tip icon=false}
-## Guidance
 
-One or two paragraphs, no abstract and no literature review: that is in the original paper.
-Say what the original study found, which specific finding you are replicating, and why it
-matters to you. Write the Introduction and Methods in the past tense, even though you write
-them before collecting data.
-:::
 
 ## Methods
 

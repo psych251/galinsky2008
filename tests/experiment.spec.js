@@ -343,23 +343,45 @@ test.describe("experiment", () => {
   });
 
   test("phones and tablets are turned away before consent", async ({ browser }) => {
-    const context = await browser.newContext({ ...devices["iPhone 13"] });
-    const page = await context.newPage();
-    await page.goto("http://localhost:8017/?emulator=1");
-    await expect(page.locator("#device-unsupported")).toBeVisible({ timeout: 20000 });
-    await expect(page.getByRole("button", { name: "I agree to participate" })).toHaveCount(0);
+    // The Android phone reproduces one that got through in Pilot A: its user agent and screen,
+    // and a browser that reports a fine pointer among its inputs (any-pointer: fine) although
+    // the touchscreen is primary. The old check let it through and the page then crashed.
+    const pilotAndroid = {
+      userAgent: "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      viewport: { width: 384, height: 832 }, deviceScaleFactor: 2.8125, isMobile: true, hasTouch: true,
+    };
+    const phones = [
+      { name: "iPhone 13", options: devices["iPhone 13"] },
+      { name: "Pilot A Android phone", options: pilotAndroid, anyPointerFine: true },
+    ];
+    for (const phone of phones) {
+      const context = await browser.newContext(phone.options);
+      if (phone.anyPointerFine) {
+        await context.addInitScript(() => {
+          const real = window.matchMedia.bind(window);
+          window.matchMedia = (q) => (/any-pointer:\s*fine/.test(q) ? { matches: true, media: q, addEventListener() {}, removeEventListener() {} } : real(q));
+        });
+      }
+      const page = await context.newPage();
+      const pageErrors = [];
+      page.on("pageerror", (e) => pageErrors.push(String(e)));
+      await page.goto("http://localhost:8017/?emulator=1");
+      await expect(page.locator("#device-unsupported"), phone.name).toBeVisible({ timeout: 20000 });
+      await expect(page.getByRole("button", { name: "I agree to participate" })).toHaveCount(0);
+      expect(pageErrors, `${phone.name}: uncaught page errors`).toEqual([]);
 
-    if (EMULATOR) {
-      // The turned-away visit is still recorded, so phone traffic is visible in the data.
-      await page.waitForFunction(() => window.__saver && window.__saver.docId);
-      const docId = await page.evaluate(() => window.__saver.docId);
-      await page.evaluate(() => window.__saver._settle());
-      const p = await fsGet(`experiments/${EXPERIMENT_ID}/participants/${docId}`);
-      const pdoc = decodeFields(p.body.fields);
-      expect(pdoc.device_supported).toBe(false);
-      expect(pdoc.completed).toBe(false);
+      if (EMULATOR) {
+        // The turned-away visit is still recorded, so phone traffic is visible in the data.
+        await page.waitForFunction(() => window.__saver && window.__saver.docId);
+        const docId = await page.evaluate(() => window.__saver.docId);
+        await page.evaluate(() => window.__saver._settle());
+        const p = await fsGet(`experiments/${EXPERIMENT_ID}/participants/${docId}`);
+        const pdoc = decodeFields(p.body.fields);
+        expect(pdoc.device_supported, phone.name).toBe(false);
+        expect(pdoc.completed).toBe(false);
+      }
+      await context.close();
     }
-    await context.close();
   });
 
   test("a desktop browser is not turned away", async ({ page }) => {

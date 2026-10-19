@@ -69,3 +69,20 @@ coding participant data (suspicion coding is done by a human, blind to condition
 - **Student's decisions:** key test, outcome (from the paper), Student's t, suspicion as the
   exclusion, blind coding.
 - **Still for the student to check:** the original numbers against the paper.
+
+### Phone turned away instead of crashing (not yet committed)
+- Diagnosed a Pilot A error report (`initJsPsych is not defined` on an Android phone) from the
+  exported `errors.csv` and `participants.csv`. Nine iPhone visits had been turned away
+  correctly; one Android phone passed the device check twice (one visit crashed, one was
+  assigned condition 1 and did not finish), because the check only asked whether *any* input
+  was a fine pointer and that phone reported one.
+- Changed the device check in `experiment.js` (`isComputer()`): the *primary* pointer must be a
+  mouse or trackpad, and browsers that identify as mobile are turned away. Laptops with
+  touchscreens still pass.
+- Extended the phone test in `tests/experiment.spec.js` with a copy of the Pilot A phone (its
+  user agent and screen, reporting a fine pointer), checking it sees the turn-away screen with
+  no page errors and is recorded as `device_supported: false`.
+- **Checked by:** the new test fails on the old code (reproducing the bug) and passes with the
+  fix; full `npm test` 12 passed, including the test that desktop browsers are not turned away.
+- **Not changed:** no participant data was edited; neither phone visit completed, so neither
+  was in the analysis set.
