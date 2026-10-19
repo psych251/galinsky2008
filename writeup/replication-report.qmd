@@ -111,9 +111,12 @@ tools, replace the table with a sentence saying so.
 
 | Tool and model | What it was used for | How you checked the output |
 |---|---|---|
-| *e.g., Claude Code (Claude Opus 5)* | *Implemented the experiment from the original Methods section* | *Ran the automated tests; took the study myself; compared every screen with the original materials* |
-| *e.g., Claude Code (Claude Opus 5)* | *Drafted the analysis code* | *Checked the exclusion counts by hand; confirmed the key test matches the preregistration* |
-| *e.g., ChatGPT* | *Comments on my draft of the Introduction (no text generated)* | *Decided which comments to act on and made every change myself; checked any factual claim against the source* |
+| Claude Code (Claude Opus 5.5) | Implemented the experiment in `experiment.js` from my specification: the four conditions, power-prime essay, 20 sentence sets, evaluation sheet, suspicion questions, and the debrief and cover-story screens using my wording | Automated end-to-end test (`npm test`, 12 tests) playing all four conditions and checking every logged field; screenshots of every screen. *[Add your own checks, e.g. took the study myself; compared screens with the original materials.]* |
+| Claude Code (Claude Opus 5.5) | Restyled the participant pages (accessible colours, essay character counter, error messages) | `npm test`; screenshots at laptop and desktop sizes. *[Add your own checks.]* |
+| Claude Code (Claude Opus 5.5) | Checked the experiment against the consent text; added the "I'd prefer not to answer" option; kept essay text out of the shared data files | `npm test`; a test export searched for essay text, found only in the private `identifiers.csv`. *[Add your own checks.]* |
+| Claude Code (Claude Opus 5.5) | Fixed phones getting past the device check (diagnosed from a Pilot A error report) | A test reproducing the Pilot A phone, failing before the fix and passing after. *[Add your own checks.]* |
+| Claude Code (Claude Opus 5.5) | Wrote the analysis code in this report: original study's numbers, conformity index, Student's t-test, suspicion exclusion with a blind coding file, power analysis including d33, sample size and cost, figures | Report rendered with no data, with test data, and on Pilot A; the original's recomputed effect matched a hand calculation from the reported means, SDs and ns. *[Add your own checks, e.g. checked the original's numbers against the paper; confirmed the key test matches the preregistration.]* |
+| ChatGPT *[add the model, e.g. GPT-5, if you know it]* | I used ChatGPT to help me understand and clarify aspects of the original study (statistical analyses and conditions). I also used it to brainstorm a possible rescue/extension, especially with deception being the key manipulation. I did not use AI to generate or write the proposal text. | *[Add how you checked, e.g. checked its explanations of the analyses and conditions against the original paper.]* |
 
 I wrote all of the text in this report myself. AI tools were not used to write, rewrite or
 paraphrase it, and were not used to generate, alter, or impute any participant data. I take full

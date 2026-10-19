@@ -97,3 +97,15 @@ coding participant data (suspicion coding is done by a human, blind to condition
   original design's power at d33 recomputes to 0.33; the report renders.
 - Debrief payment sentence changed from "$10" to the student's wording: $8 per hour, paid
   within a week of completing the study. The robot now checks this text. `npm test`: 12 passed.
+
+### Results code run on Pilot A (not yet committed)
+- Rendered the report on the student's Pilot A export (27 visits; 4 analysed). Fixed two
+  issues found in the real data: a participant who declined consent was counted as completed
+  (the analysis now requires consent), and one early session's suspicion answer was saved under
+  the old field name (now included in the coding file). The Key statistics row now says "too few
+  analysed participants" rather than "not yet collected" when data exist.
+- **Checked by:** the funnel adds up (27 started, 7 consented, 4 completed, 4 analysed); the
+  report renders with no data, with Phase 1, and with both phases. The rendered figure was
+  inspected.
+- **Not done by the agent:** suspicion coding (left blank for the student), and the analysis-plan
+  text.
