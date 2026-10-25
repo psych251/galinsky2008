@@ -14,7 +14,7 @@ const { test, expect, devices } = require("@playwright/test");
 
 const EMULATOR = process.env.EMULATOR === "1" || !!process.env.FIRESTORE_EMULATOR_HOST;
 const PROJECT = "demo-psych251";
-const EXPERIMENT_ID = "galinsky2008-pilot-a";
+const EXPERIMENT_ID = "galinsky2008-pilot-b";
 const FS = `http://localhost:8080/v1/projects/${PROJECT}/databases/(default)/documents`;
 
 const N_SENTENCE_SETS = 20;

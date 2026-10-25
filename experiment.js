@@ -24,7 +24,7 @@ window.TEMPLATE_VERSION = "0.1.0";
 const EXPERIMENT = {
   // Firestore path: experiments/<id>/participants/... Change it when you start a new study
   // so pilot data and real data never mix (e.g. "smith2016-pilot-a", "smith2016-final").
-  id: "galinsky2008-pilot-a",
+  id: "galinsky2008-pilot-b",
 
   // Trials per Firestore write. 1 = save every trial the moment it finishes (dropouts leave
   // partial data). The free tier allows 20,000 writes/day: with 200 participants x 100 trials
@@ -286,7 +286,7 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
        psycholinguistic decision-making processes. Because it is only a pilot, researchers would
        like your feedback, and afterwards you will be asked a few questions about what you thought
        of the task.</p>
-       <p>On each screen you will see five words. Please type a sentence that uses four of them.</p>`,
+       <p>On each screen you will see five words. Please type a sentence that uses <strong>four</strong> of them.</p>`,
     ],
     show_clickable_nav: true,
     data: { task: "instructions" },
