@@ -51,7 +51,7 @@ library(jsonlite)
 
 # Must match EXPERIMENT.id in experiment.js, and the --experiment you passed to the export.
 # Phase 2 runs under its own id, so its data never mix with Phase 1's.
-experiment_id        <- "galinsky2008-pilot-a"
+experiment_id        <- "galinsky2008-pilot-b"
 experiment_id_phase2 <- "galinsky2008-phase2"
 ```
 
@@ -98,13 +98,13 @@ bogus_mean <- 9.75
 
 | Tool and model | What it was used for | How you checked the output |
 |------------------------|------------------------|------------------------|
-| Claude Sonnet 5.5 | Explained the Firebase config, cloning the repo, installing Java, and terminal commands. | compared explanations against student-guide.md | 
-| Claude Sonnet 5.5 | Wrote the 20 placeholder sentence sets and the prompts you gave Claude Code. | compared against reference paper |  
-| Claude Sonnet 5.5 | Compared the template’s CLAUDE.md rules with mine| compared against example claude.md from TA-led class|
+| Claude Sonnet 5.5 | Explained the Firebase config, cloning the repo, installing Java, and terminal commands. | compared explanations against student-guide.md |
+| Claude Sonnet 5.5 | Wrote the 20 placeholder sentence sets and the prompts you gave Claude Code. | compared against reference paper |
+| Claude Sonnet 5.5 | Compared the template’s CLAUDE.md rules with mine | compared against example claude.md from TA-led class |
 | Claude Sonnet 5.5 | Gave feedback on my debrief draft, and advice on exclusions and the suspicion check. | chose what feedback to incorporate, used guidelines from lecture |
-| Claude Sonnet 5.5 | Computed the effect sizes and sample sizes above | used another agent (chatGPT) to double check, also used online calculator |  
+| Claude Sonnet 5.5 | Computed the effect sizes and sample sizes above | used another agent (chatGPT) to double check, also used online calculator |
 | Claude Code (Claude Opus 5.5) | Implemented the experiment in `experiment.js` from my specification: the four conditions, power-prime essay, 20 sentence sets, evaluation sheet, suspicion questions, and the debrief and cover-story screens using my wording | Automated end-to-end test (`npm test`, 12 tests) playing all four conditions and checking every logged field; screenshots of every screen; did the study myself |
-| Claude Code (Claude Opus 5.5) | Restyled the participant pages (accessible colors, essay character counter, error messages) | `npm test`; screenshots at laptop and desktop sizes.; did the study myself|
+| Claude Code (Claude Opus 5.5) | Restyled the participant pages (accessible colors, essay character counter, error messages) | `npm test`; screenshots at laptop and desktop sizes.; did the study myself |
 | Claude Code (Claude Opus 5.5) | Checked the experiment against the consent text; added the "I'd prefer not to answer" option; kept essay text out of the shared data files | `npm test`; a test export searched for essay text, found only in the private `identifiers.csv`. |
 | Claude Code (Claude Opus 5.5) | Fixed phones getting past the device check (diagnosed from a Pilot A error report) | A test reproducing the Pilot A phone, failing before the fix and passing after. |
 | Claude Code (Claude Opus 5.5) | Wrote the analysis code in this report: original study's numbers, conformity index, Student's t-test, suspicion exclusion with a blind coding file, power analysis including d33, sample size and cost, figures | Report rendered with no data, with test data, and on Pilot A; the original's recomputed effect matched a hand calculation from the reported means, SDs and ns. |
@@ -450,7 +450,7 @@ The original study computed a conformity index, the mean of how enjoyable & inte
 | Opt-out option | none | "I'd prefer not to answer" as an answer choice on essay and sentences | Yes, it's possible participants will not complete the prime (IV) before seeing the evaluation sheet, which will nullify the experiment |
 | Suspicion check | spoken debrief, 3 excluded | 2 written questions, coded blind to condition | Possibly, however I used the same paraphrased wording from the original study for the written questions |
 | Key test | t(38) using error from all 4 conditions | Two-group Student's t (df = n₁ + n₂ − 2) | two-group version doesn’t depend on how many people end up in the baselines |
-| Exclusions |only reported suspicion exclusions |declined consent/DNF,suspicious,missing rating (dropped from a test) | Possibly, might lose more participants with these additional criteria |
+| Exclusions | only reported suspicion exclusions | declined consent/DNF,suspicious,missing rating (dropped from a test) | Possibly, might lose more participants with these additional criteria |
 
 ### Methods addendum (post data collection)
 
@@ -583,17 +583,21 @@ summ |>
 key_data <- analysed |>
   filter(condition %in% c("High power", "Low power")) |>
   mutate(condition = droplevels(condition))
-group_n <- table(key_data$condition)
 
-if (length(group_n) == 2 && all(group_n >= 2) && sd(key_data$conformity) > 0) {
+# Same gate as diff_ci(): two or more per group and some spread within groups (a pooled SD of
+# zero would make t.test() stop with "data are essentially constant").
+if (!is.null(diff_ci(summ))) {
   # Preregistered key test: Student's independent-samples t-test, high vs low power.
   print(t.test(conformity ~ condition, data = key_data, var.equal = TRUE))
   # Robustness check, not the key test: Welch's t-test, which does not assume equal variances.
   print(t.test(conformity ~ condition, data = key_data))
 } else {
-  message("t-test not run: it needs at least two analysed participants in each of the high- and ",
-          "low-power conditions, with some spread in their ratings. There are ",
-          sum(group_n), " in those two conditions so far; with pilot data this is expected.")
+  key_n <- summ |> filter(condition %in% c("High power", "Low power"))
+  # cat(), not message(): with `warning: false` in the header, Quarto hides message() output.
+  cat("t-test not run: it needs at least two analysed participants in each of the high- and ",
+      "low-power conditions, with some spread in ratings within them. So far: ",
+      paste(key_n$condition, key_n$n, sep = ": ", collapse = ", "),
+      "; with pilot data this is expected.\n", sep = "")
 }
 ```
 
@@ -620,7 +624,7 @@ if (!is.null(rep)) {
               p = format.pval(p, digits = 2, eps = 0.001)) |>
     knitr::kable(caption = "Effect size: difference in the conformity index, high power minus low power (scale points), with Cohen's d.")
 } else {
-  message("Replication effect size not computed yet: need at least two analysed participants in each of the high- and low-power conditions.")
+  cat("Replication effect size not computed yet: need at least two analysed participants in each of the high- and low-power conditions.\n")
 }
 ```
 
@@ -694,7 +698,7 @@ if (nrow(both) >= 3 && all(map_dbl(both, sd) > 0)) {
   cat(sprintf("Cronbach's alpha for the two ratings: %.2f (original: .85), r = %.2f, n = %d.\n",
               2 * (1 - item_var / total_var), cor(both$interesting, both$enjoyable), nrow(both)))
 } else {
-  message("Alpha not computed yet: needs at least three analysed participants with varied ratings.")
+  cat("Alpha not computed yet: needs at least three analysed participants with varied ratings.\n")
 }
 
 declines <- trials |>
@@ -723,7 +727,7 @@ if (nrow(errors) > 0) {
   errors |> select(any_of(c("at", "trial_index", "message"))) |> head(20) |>
     knitr::kable(caption = "JavaScript errors reported from participants' browsers.")
 } else {
-  message("No errors were reported from participants' browsers.")
+  cat("No errors were reported from participants' browsers.\n")
 }
 ```
 
