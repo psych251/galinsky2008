@@ -1,0 +1,4 @@
+- source: replication-report.qmd
+  posit-connect-cloud:
+    - id: 01a1756b-7a39-a79e-dd64-1bce8a0c3f9c
+      url: https://connect.posit.cloud/reneecreppy-oss/content/01a1756b-7a39-a79e-dd64-1bce8a0c3f9c
