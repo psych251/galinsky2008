@@ -3,16 +3,19 @@
  * power and conformity to others' evaluations of a boring task.
  *
  * Design
- *   IV:      condition, between subjects, 4 levels (random assignment, see CONDITIONS):
+ *   IV:      condition, between subjects (random assignment, see CONDITIONS):
  *            1 high-power prime + feedback sheet, 2 low-power prime + feedback sheet,
  *            3 no prime + feedback sheet,         4 no prime + blank sheet.
+ *            Only conditions 1 and 2 are assigned (ASSIGNED_CONDITIONS); 3 and 4 are kept
+ *            in the code but no longer used.
  *   DVs:     task "evaluation_sheet": `interesting` and `enjoyable` (1-11, null if blank),
  *            plus `sheet_comment`. Feedback-sheet conditions see 10 previous (high) ratings.
  *   Trials:  consent, welcome, power prime (conditions 1-2 only; `essay`, >= 200 chars),
  *            task instructions, 20 sentence-formation sets in fixed order (task
  *            "sentence_formation": `sentence`, `rt`, `onset_time`, `submit_time`),
  *            evaluation sheet, suspicion, demographics, debrief. No time limits.
- *   Random:  simple random assignment to the 4 conditions; no counterbalancing.
+ *   Random:  simple random assignment to conditions 1 and 2, equal probability; no
+ *            counterbalancing.
  *   Checks:  none built in. Exclusions are defined in the report, not here.
  */
 
@@ -24,7 +27,7 @@ window.TEMPLATE_VERSION = "0.1.0";
 const EXPERIMENT = {
   // Firestore path: experiments/<id>/participants/... Change it when you start a new study
   // so pilot data and real data never mix (e.g. "smith2016-pilot-a", "smith2016-final").
-  id: "galinsky2008-pilot-b",
+  id: "galinsky2008-final",
 
   // Trials per Firestore write. 1 = save every trial the moment it finishes (dropouts leave
   // partial data). The free tier allows 20,000 writes/day: with 200 participants x 100 trials
@@ -69,8 +72,12 @@ const CHUNK_SIZE = Number(URL_PARAMS.get("chunk_size")) || EXPERIMENT.chunk_size
 // Test-only: `?cc=CODE` sets a Prolific completion code during emulator runs, so the test
 // suite can check the screen a participant sees once you have set yours. Ignored in live runs.
 if (USE_EMULATOR && URL_PARAMS.get("cc")) EXPERIMENT.prolific_completion_code = URL_PARAMS.get("cc");
-// Test-only: `?condition=N` (1-4) forces the condition during emulator runs. Ignored in live runs.
-const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === URL_PARAMS.get("condition")) : undefined;
+// Conditions participants are randomly assigned to, with equal probability. Conditions 3 and 4
+// (no prime) are still defined in CONDITIONS below but are not assigned.
+const ASSIGNED_CONDITIONS = [1, 2];
+// Test-only: `?condition=N` forces one of the assigned conditions during emulator runs. Ignored
+// in live runs, and for a condition that is not assigned.
+const FORCED_CONDITION = USE_EMULATOR ? ASSIGNED_CONDITIONS.find((c) => String(c) === URL_PARAMS.get("condition")) : undefined;
 
 // ---------------------------------------------------------------------------
 // Boot: connect the saver first so even a crash in the first trial gets logged.
@@ -148,8 +155,8 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
     experiment_id: EXPERIMENT.id,
   });
 
-  // Random assignment to one of four between-subjects conditions, recorded on every trial and
-  // on the participant document. (For exact counterbalancing you would need a server; random
+  // Random assignment to one of the ASSIGNED_CONDITIONS, recorded on every trial and on the
+  // participant document. (For exact counterbalancing you would need a server; random
   // assignment is fine at course sample sizes.) `condition` is the number 1-4; `prime` and
   // `sheet` spell out its two components so the analysis never has to decode the number.
   const CONDITIONS = {
@@ -158,7 +165,7 @@ const FORCED_CONDITION = USE_EMULATOR ? [1, 2, 3, 4].find((c) => String(c) === U
     3: { prime: "none", sheet: "feedback" },
     4: { prime: "none", sheet: "blank" },
   };
-  const condition = FORCED_CONDITION || jsPsych.randomization.sampleWithoutReplacement([1, 2, 3, 4], 1)[0];
+  const condition = FORCED_CONDITION || jsPsych.randomization.sampleWithoutReplacement(ASSIGNED_CONDITIONS, 1)[0];
   const { prime, sheet } = CONDITIONS[condition];
   jsPsych.data.addProperties({ condition: condition, prime: prime, sheet: sheet });
   saver.updateParticipant({ condition: condition, prime: prime, sheet: sheet });

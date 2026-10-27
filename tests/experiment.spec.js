@@ -14,7 +14,7 @@ const { test, expect, devices } = require("@playwright/test");
 
 const EMULATOR = process.env.EMULATOR === "1" || !!process.env.FIRESTORE_EMULATOR_HOST;
 const PROJECT = "demo-psych251";
-const EXPERIMENT_ID = "galinsky2008-pilot-b";
+const EXPERIMENT_ID = "galinsky2008-final";
 const FS = `http://localhost:8080/v1/projects/${PROJECT}/databases/(default)/documents`;
 
 const N_SENTENCE_SETS = 20;
@@ -22,13 +22,16 @@ const LONG_ESSAY = "Robot participant recalls an incident. ".repeat(8); // > 200
 const robotSentence = (setNumber) => "robot sentence " + setNumber;
 const DECLINED_SET = 2; // the robot ticks "I'd prefer not to answer" on this sentence set
 
-// Plays the whole study in whatever condition the page assigned (window.__condition).
+// Plays the whole study in whatever condition the page assigned (window.__condition), which
+// must be 1 or 2: conditions 3 and 4 are still in experiment.js but are no longer assigned.
+// The branches below for 3 and 4 are kept so they work again if those conditions return.
 // With { stopBeforeFinish: true } it stops on the debrief screen without clicking Finish.
 // With { declineEssay: true } it writes a short essay, then declines instead of finishing it.
 async function runThroughExperiment(page, { stopBeforeFinish = false, declineEssay = false } = {}) {
   // 1. consent
   await page.getByRole("button", { name: "I agree to participate" }).click();
   const condition = await page.evaluate(() => window.__condition);
+  expect([1, 2]).toContain(condition);
   // 2. welcome (one page)
   await expect(page.getByText("Some will ask about your perceptions", { exact: false })).toBeVisible();
   await page.locator("#jspsych-instructions-next").click();
@@ -148,8 +151,8 @@ test.describe("experiment", () => {
     const consoleErrors = [];
     page.on("pageerror", (e) => consoleErrors.push(String(e)));
 
-    // Emulator runs force each of the four conditions in turn; offline runs one random one.
-    const conditions = EMULATOR ? [1, 2, 3, 4] : [null];
+    // Emulator runs force each assigned condition (1 and 2) in turn; offline runs one random one.
+    const conditions = EMULATOR ? [1, 2] : [null];
     for (const forced of conditions) {
       await page.goto(EMULATOR
         ? `/?emulator=1&condition=${forced}&PROLIFIC_PID=robot123&STUDY_ID=s1&SESSION_ID=sess1`
@@ -255,6 +258,20 @@ test.describe("experiment", () => {
     }
   });
 
+  test("random assignment uses only conditions 1 and 2, and both occur", async ({ page }) => {
+    // 20 page loads: the chance that a fair coin never gives one of the two is about 1 in 500,000.
+    // `?condition=3` must not force an unassigned condition: it falls back to random assignment.
+    test.setTimeout(120000);
+    const seen = [];
+    for (let i = 0; i < 20; i++) {
+      await page.goto(EMULATOR ? (i === 0 ? "/?emulator=1&condition=3" : "/?emulator=1") : "/");
+      await page.waitForFunction(() => window.__condition !== undefined);
+      seen.push(await page.evaluate(() => window.__condition));
+    }
+    expect(seen.every((c) => c === 1 || c === 2), `assigned: ${seen.join(",")}`).toBe(true);
+    expect(new Set(seen).size, `assigned: ${seen.join(",")}`).toBe(2);
+  });
+
   test("chunked writes (chunk_size > 1) save every trial", async ({ page }) => {
     test.skip(!EMULATOR, "needs the Firestore emulator");
     await page.goto("/?emulator=1&chunk_size=5");
@@ -267,7 +284,7 @@ test.describe("experiment", () => {
     expect(docs.length).toBe(Math.ceil(p.n_trials / 5));
     const indices = docs.flatMap((d) => d.trials).map((t) => t.trial_index).sort((a, b) => a - b);
     // Compare with the full dataset rather than 0..n-1: jsPsych still uses up a trial_index
-    // for the power prime when it is skipped (conditions 3 and 4).
+    // for a conditional trial that is skipped (the power prime in conditions 3 and 4).
     expect(indices).toEqual(JSON.parse(p.full_data).map((t) => t.trial_index).sort((a, b) => a - b));
     expect(new Set(indices).size).toBe(p.n_trials);
   });
