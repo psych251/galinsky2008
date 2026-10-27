@@ -507,12 +507,30 @@ analysed     <- phase1$analysed
 #| label: funnel
 #| eval: !expr have_data
 funnel_levels <- c("Started", "Consented", "Completed", "Not excluded for suspicion", "Analysed (both ratings given)")
+# Leave out sessions with no real Prolific ID (missing, or Prolific's unfilled placeholder
+# "{{%PROLIFIC_PID%}}"): those are test runs, not participants. The IDs are only in the
+# gitignored identifiers.csv; just the participant ids that pass are taken from it, and
+# nothing from it is printed. Without that file (e.g. a fresh clone) every session is counted.
+ids_path <- file.path("..", "data", "raw", experiment_id, "identifiers.csv")
+if (file.exists(ids_path)) {
+  with_pid <- read_csv(ids_path, col_types = cols(.default = "c"),
+                       col_select = c(participant_id, prolific_pid)) |>
+    filter(!is.na(prolific_pid), trimws(prolific_pid) != "", prolific_pid != "{{%PROLIFIC_PID%}}") |>
+    pull(participant_id)
+  cat(sprintf("Left out of this table: %d session(s) with no real Prolific ID (test runs).\n",
+              sum(!participants$participant_id %in% with_pid)))
+} else {
+  with_pid <- participants$participant_id
+  cat("identifiers.csv not found, so sessions without a real Prolific ID are not left out of this table.\n")
+}
+in_flow <- function(d) d |> filter(participant_id %in% with_pid)
+
 bind_rows(
-  participants |> mutate(step = funnel_levels[1]),
-  participants |> filter(consented %in% TRUE) |> mutate(step = funnel_levels[2]),
-  complete     |> mutate(step = funnel_levels[3]),
-  keep         |> mutate(step = funnel_levels[4]),
-  analysed     |> mutate(step = funnel_levels[5])
+  in_flow(participants) |> mutate(step = funnel_levels[1]),
+  in_flow(participants) |> filter(consented %in% TRUE) |> mutate(step = funnel_levels[2]),
+  in_flow(complete)     |> mutate(step = funnel_levels[3]),
+  in_flow(keep)         |> mutate(step = funnel_levels[4]),
+  in_flow(analysed)     |> mutate(step = funnel_levels[5])
 ) |>
   # Visitors turned away for using a phone or tablet were never assigned a condition.
   mutate(step = factor(step, levels = funnel_levels),
