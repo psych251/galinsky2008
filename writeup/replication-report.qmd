@@ -212,11 +212,17 @@ read_phase <- function(id) {
        n_missing_rating = sum(is.na(keep$conformity)))
 }
 
+# The conditions the final study assigns (ASSIGNED_CONDITIONS in experiment.js). Tables and
+# figures always show these; any other condition is shown only if someone was in it (as in
+# the pilots, which also ran conditions 3 and 4), so there are no empty rows for them.
+study_conditions <- label_condition(1:2)
+
 # Conformity index by condition among analysed participants: n, mean, SD.
 condition_means <- function(d) {
   d$analysed |>
     group_by(condition, .drop = FALSE) |>
-    summarise(n = n(), mean = mean(conformity), sd = sd(conformity), .groups = "drop")
+    summarise(n = n(), mean = mean(conformity), sd = sd(conformity), .groups = "drop") |>
+    filter(condition %in% study_conditions | n > 0)
 }
 
 # The key statistic: high power minus low power on the conformity index, with a 95% CI, from
@@ -250,6 +256,11 @@ comparison_plot <- function(...) {
     mutate(half  = ifelse(!is.na(n) & n > 1, qt(0.975, pmax(n - 1, 1)) * sd / sqrt(n), NA_real_),
            Study = factor(Study, levels = names(studies)),
            label = ifelse(is.na(n), "n = ?", sprintf("n = %d", n)))
+  # Show the study conditions, plus any other condition a later study has data for: the first
+  # study's (the original's) baselines are left out unless a replication ran them too.
+  shown <- union(as.character(study_conditions),
+                 as.character(df$condition[df$Study != names(studies)[1]]))
+  df <- df |> filter(condition %in% shown)
   dodge <- position_dodge(width = 0.6)
   ggplot(df, aes(x = condition, y = mean, colour = Study, shape = Study)) +
     # The mean of the bogus ratings on the feedback sheet (explained in the figure caption).
@@ -342,16 +353,16 @@ power_rows <- map_dfr(names(effect_sizes), function(es) {
   map_dfr(c(0.80, 0.90, 0.95), function(pw) {
     n <- power.t.test(delta = effect_sizes[[es]], sd = 1, power = pw, sig.level = 0.05)$n
     tibble(effect = sprintf("%s (d = %.2f)", es, effect_sizes[[es]]),
-           power = scales::percent(pw), n_per_group = ceiling(n), n_total = 4 * ceiling(n))
+           power = scales::percent(pw), n_per_group = ceiling(n), n_total = 2 * ceiling(n))
   })
 })
 
 # 2.5 times the original high- and low-power samples (11 and 9).
 two_and_half <- ceiling(2.5 * original$n[1:2])
 
-knitr::kable(power_rows, col.names = c("Effect size", "Power", "N per condition", "N total (4 conditions)"),
+knitr::kable(power_rows, col.names = c("Effect size", "Power", "N per condition", "N total (2 conditions)"),
              caption = sprintf(
-               "Sample needed to detect the original high- vs low-power difference (%.2f points, d = %.2f) and d33 (d = %.2f, the effect the original's 11 vs 9 design had 33%% power to detect), Student's t-test, two-sided alpha = .05. The total assumes equal allocation to all four conditions.",
+               "Sample needed to detect the original high- vs low-power difference (%.2f points, d = %.2f) and d33 (d = %.2f, the effect the original's 11 vs 9 design had 33%% power to detect), Student's t-test, two-sided alpha = .05. The total assumes equal allocation to both conditions.",
                orig_stats$estimate, original_d, d33))
 
 # Planned sample: 80% power at d33, inflated for expected exclusions.
@@ -507,6 +518,10 @@ bind_rows(
   mutate(step = factor(step, levels = funnel_levels),
          condition = fct_na_value_to_level(condition, level = "Not assigned")) |>
   count(step, condition, .drop = FALSE) |>
+  # Drop a column that would be all zeros, unless it is one of the study conditions.
+  group_by(condition) |>
+  filter(condition %in% study_conditions | sum(n) > 0) |>
+  ungroup() |>
   pivot_wider(names_from = condition, values_from = n, values_fill = 0) |>
   mutate(Total = rowSums(across(-step))) |>
   rename(Step = step) |>
@@ -716,6 +731,7 @@ if (nrow(declines) > 0) {
               `Declined 1+ sentences` = sum(sentences_declined > 0),
               `Sentences declined (mean)` = sprintf("%.1f", mean(sentences_declined)),
               .groups = "drop") |>
+    filter(Condition %in% study_conditions | n > 0) |>
     knitr::kable(caption = "Exploratory: use of the \"I'd prefer not to answer\" option, participants who passed the exclusion rule. The essay is shown only in the two power conditions.")
 }
 ```
