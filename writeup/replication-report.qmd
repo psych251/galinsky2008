@@ -506,6 +506,7 @@ analysed     <- phase1$analysed
 ```{r}
 #| label: funnel
 #| eval: !expr have_data
+#| echo: false
 funnel_levels <- c("Started", "Consented", "Completed", "Not excluded for suspicion", "Analysed (both ratings given)")
 # Leave out sessions with no real Prolific ID (missing, or Prolific's unfilled placeholder
 # "{{%PROLIFIC_PID%}}"): those are test runs, not participants. The IDs are only in the
@@ -517,13 +518,18 @@ if (file.exists(ids_path)) {
                        col_select = c(participant_id, prolific_pid)) |>
     filter(!is.na(prolific_pid), trimws(prolific_pid) != "", prolific_pid != "{{%PROLIFIC_PID%}}") |>
     pull(participant_id)
-  cat(sprintf("Left out of this table: %d session(s) with no real Prolific ID (test runs).\n",
-              sum(!participants$participant_id %in% with_pid)))
 } else {
   with_pid <- participants$participant_id
   cat("identifiers.csv not found, so sessions without a real Prolific ID are not left out of this table.\n")
 }
-in_flow <- function(d) d |> filter(participant_id %in% with_pid)
+# Test runs whose Prolific ID looks real, so the rule above cannot catch them (e.g. previewing
+# the study on Prolific; the ID has no submission on Prolific). Listed per experiment id.
+known_test_runs <- list(`galinsky2008-pilot-b` = c("z4u4vKCKQkPyz5zG1mR1V9icrk82-86732787"))
+in_study <- setdiff(with_pid, known_test_runs[[experiment_id]])
+cat(sprintf("Left out of this table: %d session(s) that are test runs (no real Prolific ID, or a known test run).\n",
+            sum(!participants$participant_id %in% in_study)))
+# Used here and by the sentence under the table, so both count the same sessions.
+in_flow <- function(d) d |> filter(participant_id %in% in_study)
 
 bind_rows(
   in_flow(participants) |> mutate(step = funnel_levels[1]),
@@ -552,14 +558,21 @@ bind_rows(
 #| echo: false
 #| results: asis
 people <- function(n) sprintf(if (n == 1) "%d participant" else "%d participants", n)
+# The same sessions as the participant-flow table (in_flow() is defined there, without test runs).
+flow_participants <- in_flow(participants)
+flow_complete     <- in_flow(complete)
+flow_keep         <- in_flow(keep)
+flow_analysed     <- in_flow(analysed)
+n_uncoded <- sum(is.na(flow_keep$suspicious))
 cat(sprintf("Of %s who started, %s declined consent and %d consented and completed the study. Excluded as suspicious: %s. Left at least one rating blank: %s. Analysed: %s.",
-            people(nrow(participants)), people(phase1$n_declined_consent), nrow(complete),
-            people(phase1$n_suspicious), people(phase1$n_missing_rating), people(nrow(analysed))))
-if (phase1$n_uncoded > 0) {
+            people(nrow(flow_participants)), people(sum(flow_participants$consented %in% FALSE)),
+            nrow(flow_complete), people(nrow(flow_complete) - nrow(flow_keep)),
+            people(nrow(flow_keep) - nrow(flow_analysed)), people(nrow(flow_analysed))))
+if (n_uncoded > 0) {
   cat(sprintf(" **%d completed participant(s) have not been coded for suspicion yet**, so they are included for now: fill in the `suspicious` column of `data/raw/%s/suspicion_codes.csv` and render again.",
-              phase1$n_uncoded, experiment_id))
+              n_uncoded, experiment_id))
 }
-if (nrow(analysed) == 0) cat(" No participants remain for analysis yet, so the results below are empty.")
+if (nrow(flow_analysed) == 0) cat(" No participants remain for analysis yet, so the results below are empty.")
 cat("\n")
 ```
 
