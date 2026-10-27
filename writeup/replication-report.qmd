@@ -325,7 +325,7 @@ The stimuli used in this study were a sentence formation task, autobiographical 
 ### Power analysis
 
 The original paper did not report an effect size, so I calculated it from the statistics reported from this experiment. I calculated that the original effect size was 0.96 (calculated from the high power condition(M = 8.68, SD = 1.03, n = 11) and the low power condition M = 9.55, SD = 0.73, n = 9)). For a two-sided independent sample t-test with α = .05, detecting this effect required 19, 24, and 30 participants per group for 80%, 90%, and 95% power, respectively. As this original effect could have been overestimated, I based the planned sample size on d =0.72, which meant that the original groups would have had to detect approximately 33% power. A power analysis indicated that 32 participants per group would provide 80% power to detect this effect, so I plan to have 32 participants in each of the high and low power conditions with bogus evaluation sheets (64 across both conditions).\
-Assuming that some participants (about 15% estimated) will be excluded due to suspicions about the experiments (as in the original study) or due to declining to complete the power priming, or incomplete ratings, I divided 32 by 0.85 for a recruitment target of 38 participants per condition, or 76 in total. At 8 dollars per hour and an estimated completion time of 11 minutes, I budgeted paying \~1.47/ participant (approximately \$223.44 total for participants across all 4 conditions).
+Assuming that some participants (about 15% estimated) will be excluded due to suspicions about the experiments (as in the original study) or due to declining to complete the power priming, or incomplete ratings, I divided 32 by 0.85 for a recruitment target of 38 participants per condition, or 76 in total. At 8.12 dollars per hour and an estimated completion time of 11 minutes, I budgeted paying \~1.49/ participant (approximately \$151 total for participants).
 
 ```{r}
 #| label: power
@@ -402,7 +402,7 @@ knitr::kable(planned, align = "lr",
              caption = "Planned sample and cost, two key conditions (high and low power). Edit expected_exclusion_rate, reward_per_hour, study_minutes and fee_rate in this chunk.")
 ```
 
-For comparison, 2.5 times the original sample would be `r two_and_half[1]` in the gain frame and `r two_and_half[2]` in the loss frame (`r sum(two_and_half)` in total).
+For comparison, 2.5 times the original sample would be `r two_and_half[1]` in the high-power condition and `r two_and_half[2]` in the low-power condition (`r sum(two_and_half)` in total).
 
 ### Planned sample
 
@@ -410,7 +410,9 @@ The planned sample is US residents on Prolific, who are fluent in English, and a
 
 ### Materials
 
-Power Prime The first task participants completed comprised the power manipulation, which was identical to the procedure used by Galinsky et al. (2003). Participants were asked to recall and write about a particular incident in their lives and\were given a sheet of paper with 19 lines to complete this task.Those participants assigned to the high-power condition were instructed:
+### Power Prime 
+
+The first task participants completed comprised the power manipulation, which was identical to the procedure used by Galinsky et al. (2003). Participants were asked to recall and write about a particular incident in their lives and\were given a sheet of paper with 19 lines to complete this task.Those participants assigned to the high-power condition were instructed:
 
 "Recall a particular incident in which you had power over another individual or individuals. By power, we mean a situation in which you controlled the ability of another person or persons to get something they wanted, or were in a position to evaluate those individuals. Please describe this situation in which you had power—what happened, how you felt, etc”
 
@@ -424,7 +426,9 @@ Link to study: https://psych251.github.io/galinsky2008/
 
 Evaluation Sheet The feedback sheet ratings, comments, title, and directions were followed precisely in this replication.
 
-Other The conditions of the original study were followed, in addition to the task format, outcome (ratings), and the suspicion inclusion.
+Other
+
+Conditions 1 and 2 of the original study were followed, in addition to the task format, outcome (ratings), and the suspicion inclusion.
 
 ### Procedure
 
@@ -432,12 +436,10 @@ Before the study starts: Participants access the study though a Prolific link. T
 
 1.  High-power condition, bogus evaluation sheet: asked about a time where power over another individual or individuals, saw bogus evaluation sheet of “previous participants” responses
 2.  Low-power condition, bogus evaluation sheet: asked about a time where someone else had power over them, saw evaluation sheet
-3.  Conformity baseline: no power prime, but see the evaluation sheet
-4.  Attitude baseline: no power prime, no evaluation sheet
 
-After the study starts: First, participants see the online consent form. If they chose to participate, they proceed through the following: In conditions 1 or 2 only), participants typed a response to the autobiographical power priming question (200 character minimum recommended), and had an option to decline. They next saw a screen that explained that they were being asked to complete a sentence formation task for a pilot study looking at “psycholinguistic decision-making processes”. Participants completed 20 of these puzzles, and were shown 5 worlds on the screen and were asked to make a sentence with 4 of them (they could skip any individual prompt). At the end of the study, participants saw a bogus participation evaluation sheet, which showed ten previous participants’ ratings and four comments, with the participant’s own row labeled 29 (in conditions 1 to 3). In condition 4, participants saw a blank evaluation sheet. The next screen screened for suspicion, and asked participants to type responses to these questions: Next, participants completed a short demographic questionnaire and viewed the debrief form to complete the study. The estimated time to completion is around 11 minutes.
+After the study starts: First, participants see the online consent form. If they chose to participate, they proceed through the following: In conditions 1 or 2 only), participants typed a response to the autobiographical power priming question (200 character minimum recommended), and had an option to decline. They next saw a screen that explained that they were being asked to complete a sentence formation task for a pilot study looking at “psycholinguistic decision-making processes”. Participants completed 20 of these puzzles, and were shown 5 worlds on the screen and were asked to make a sentence with 4 of them (they could skip any individual prompt). At the end of the study, participants saw a bogus participation evaluation sheet, which showed ten previous participants’ ratings and four comments, with the participant’s own row labeled 29 (in both conditions).The next screen screened for suspicion, and asked participants to type responses to these questions: Next, participants completed a short demographic questionnaire and viewed the debrief form to complete the study. The estimated time to completion is around 11 minutes.
 
-Link to study:https://psych251.github.io/galinsky2008/
+Link to study: https://psych251.github.io/galinsky2008/
 
 ### Analysis plan
 
@@ -453,6 +455,7 @@ The original study computed a conformity index, the mean of how enjoyable & inte
 |------------------|------------------|------------------|------------------|
 | Sample | 45 undergraduate students | Adults recruited on Prolific | Possibly |
 | Setting | In-person in the lab, arriving in groups of 2-3, experimenter present | Online, unsupervised, on the participant's own computer | Possibly |
+| Conditions | 4 conditions (included attitude and conformity baseline) | 2 conditions (high power and low power with evaluation sheet) | Yes, for the interpretation of the results. I can test if high-power participants rated lower that low-power participants, but not which group drove the difference. |
 | Cover story | explained aloud by experimenter | written on screen, in my own words | Unlikely, the main message is the same |
 | Power prime | written on paper, required number of lines | typed, at least 200 characters recommended | No, the main exercise is the same |
 | Sentence task | 20 word sentence task, method directly adapted from Epley and Gilovich (1999), set order was not specified | 20 word task, no access to original stimuli, used Claude to generate task with parameters from Epley and Gilovich (1999) | Unlikely. |
@@ -461,7 +464,39 @@ The original study computed a conformity index, the mean of how enjoyable & inte
 | Opt-out option | none | "I'd prefer not to answer" as an answer choice on essay and sentences | Yes, it's possible participants will not complete the prime (IV) before seeing the evaluation sheet, which will nullify the experiment |
 | Suspicion check | spoken debrief, 3 excluded | 2 written questions, coded blind to condition | Possibly, however I used the same paraphrased wording from the original study for the written questions |
 | Key test | t(38) using error from all 4 conditions | Two-group Student's t (df = n₁ + n₂ − 2) | two-group version doesn’t depend on how many people end up in the baselines |
-| Exclusions | only reported suspicion exclusions | declined consent/DNF,suspicious,missing rating (dropped from a test) | Possibly, might lose more participants with these additional criteria |
+| Exclusions | only reported suspicion exclusions | essay decliners, test runs/my own sessions, incomplete sessions, missing ratings, answers coded as 'suspicious' (participant says previous ratings/comments are fake, made up, planted, or not from real people) were all grounds for exclusion | Possibly, this replication has more exclusion criteria than the original (why 15% more participants were recruited) |
+
+### Pilot B
+
+5 participants started the study, 4 people completed it, and 1 dropped out. 
+
+The median completion time was 8.02 minutes (min = 6.24 mins, max = 12.98 mins). For the full sample, the 11-minute estimate and the reward stay  the same to cover slower first- time participants.
+
+In pilot B, one participant started and completed the high power condition (condition 1)  and  two participants started but only one completed the low power condition (condition 2). The participant that did not finish in condition 2 completed their consent form, saw the welcome screen, and the essay prompt. They did not reach any later tasks after declining the essay (however, there is an option to continue after declining to respond, so it is unclear why they left the study).
+
+Two participants started and completed the conformity baseline condition, and no participants were assigned to the attitude baseline condition (This is not surprising to see for at least one condition since only 5 people started the study).  
+
+One of the three people in conditions 1 & 2 declined to complete the essay. The participant assigned to condition 1 wrote a 500 character response to the power prime, and the participant assigned to condition 2 wrote a 228 character response to the prompt. No included participants declined to complete the sentence task - every response was at least 4 words long. 
+
+I excluded 3 participant sessions in pilot B. After double checking the ‘participants’ and ‘identifiers’ csv files, one of these sessions  was mine after previewing the study on Prolific. Another was an unsaved session (no real Prolific ID attached) and the last was a placeholder Prolific ID. 
+
+None of the 4 participants who completed the study were coded as suspicious. All 4 saw the feedback sheet (conditions 1-3), so they were eligible to doubt it.
+
+The original study did not have a comprehension check (this replication also did not), only a suspicion check. Instead, as informal evidence that participants understood the tasks, I checked for essay completeness if participants were assigned to that condition, and also for a lack of declines in the sentence formation task. The essay opt-out was offered deliberately, as the consent form states participants are allowed to skip questions. One person declined to respond to this, and it does not show they misunderstood the prompt (it is unclear why they left the study) 
+
+Before launching pilot B, I made several changes to the study. I bolded the word ‘four’ in the instructions of the sentence formation task to address a TA’s feedback in an earlier milestone. The [EXPERIMENT.id](http://experimend.id/) was switched to galinsky2008-pilot-b so that the datasets from each pilot would be separate. I added the Prolific completion code to [experiment.js](http://experiment.js/), and also changed the device check (one Android got past this and crashed).
+
+### Changes after Pilot B
+
+After pilot B, I created a new id for the full study (galinsky2008-final). I dropped the two baseline conditions so that the final study has only high-power and low-power with the feedback sheet. Participants are only assigned to conditions 1 and 2, and the robot test was updated to reflect this. I coded the pilot B answers before a coding rule was finalized, and none of the responses were suspicious/borderline.  I clarified the coding rule before preregistration (changes before this are allowed, and this narrower coding rule gives the same result). The finalized rule is below: 
+
+- A response is marked as ‘suspicious’ if the participant says or implies that the previous ratings or comments were fake, made up, planted, or not from other real people. Responses are coded as ‘not suspicious’ if the participant only comments about high ratings, or that the task seemed boring or odd, or guesses about the study’s topic. This rule applies to conditions 1 to 3 (condition 4 has no evaluation sheet). 
+
+- Doubtful/ambiguous answers are not coded as suspicious unless they clearly question the feedback’s sheet’s authenticity.
+
+- The original study only mentioned that three participants were excluded for questioning the feedback sheet’s authenticity. For the above rule, I used the original paper’s criterion and added the word ‘clearly’ to rule out gray cases. 
+
+The code in the report (power table total, figures, and flow table) was updated to include the two conditions. The flow table and corresponding sentence filter out my three test runs of the study.The participant-facing text remains the same after pilot B.
 
 ### Methods addendum (post data collection)
 
@@ -718,7 +753,7 @@ Whichever you choose, use the same measure, scale, condition order and error-bar
 ```{r}
 #| label: fig-comparison
 #| eval: !expr have_data
-#| fig-cap: "Conformity index (mean of the interesting and enjoyable ratings, 1–11) by condition, original study (Galinsky et al., 2008, Experiment 3, reported means and SDs) and Phase 1 replication. Error bars are 95% confidence intervals; the original's two baseline conditions have no error bars because their ns were not reported. The dashed line is the mean of the bogus ratings shown on the feedback sheet."
+#| fig-cap: "Conformity index (mean of the interesting and enjoyable ratings, 1–11) by condition, original study (Galinsky et al., 2008, Experiment 3, reported means and SDs) and Phase 1 replication. Error bars are 95% confidence intervals. The dashed line is the mean of the bogus ratings shown on the feedback sheet."
 #| fig-width: 8
 #| fig-height: 4.5
 comparison_plot(Original = original, `Phase 1: replication` = summ)
@@ -934,7 +969,7 @@ if (!is.null(p2_stats)) {
 ```{r}
 #| label: fig-phase2
 #| eval: !expr have_phase2
-#| fig-cap: "Conformity index (1–11) by condition: original study, Phase 1 replication, and Phase 2 extension. Error bars are 95% confidence intervals; the original's baselines have none because their ns were not reported. The dashed line is the mean of the bogus ratings."
+#| fig-cap: "Conformity index (1–11) by condition: original study, Phase 1 replication, and Phase 2 extension. Error bars are 95% confidence intervals. The dashed line is the mean of the bogus ratings."
 #| fig-width: 8
 #| fig-height: 4.5
 comparison_plot(Original = original,
