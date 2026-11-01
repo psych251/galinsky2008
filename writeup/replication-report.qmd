@@ -66,8 +66,7 @@ experiment_id_phase2 <- "galinsky2008-phase2"
 # of the "interesting" and "enjoyable" ratings, each 1-11 (alpha = .85, following Epley &
 # Gilovich, 1999). Means and SDs are as reported. The high- and low-power ns (11 and 9) are
 # inferred from the one-sample tests against the bogus ratings, t(10) and t(8); the two
-# baseline ns (22 in total) are not reported, so they are NA and their means are plotted
-# without error bars.
+# baseline ns (22 in total) are not reported, so they are NA (the baselines are not plotted).
 #
 # The paper's high vs low test, t(38) = 2.00, used the error term from all four conditions.
 # Recomputed as a two-group Student's t from these means, SDs and ns it is t(18) = -2.13.
@@ -146,6 +145,10 @@ bogus_mean <- 9.75
 | Claude Code (Claude Opus 5.5) | Pointed out text for me to fix: explained inline code but did not rewrite text                                                                                                                                                                                                                 | NA                                                                                                                                                              |
 +-------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | Claude Code (Claude Opus 5.5) | Fixed the key t-test code chunk: uses the same check as diff_ci(). Prints a note when groups are too small                                                                                                                                                                                     | Tested the old and new versions on made up data and confirmed the render                                                                                        |
++-------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Claude Code (Claude Opus 5.5) | changed the report's plotting code so both. figures only show high-power and low-power conditions. updated code comment to match                                                                                                                                                               | report rendered with no errors; I double checked that the phase 1 figure only shows these conditions                                                            |
++-------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Claude Code (Claude Opus 5.5) | Changed a printed reminder message in analysis code flagged by TA                                                                                                                                                                                                                              | checked report was rendered with no errors, sentence + note are gone from HTML                                                                                  |
 +-------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ChatGPT                       | I used ChatGPT to help me understand and clarify aspects of the original study (statistical analyses and conditions). I also used it to brainstorm a possible rescue/extension, especially with deception being the key manipulation. I did not use AI to generate or write the proposal text. | checked its explanations of the analyses and conditions against the original paper                                                                              |
 +-------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -296,11 +299,8 @@ comparison_plot <- function(...) {
     mutate(half  = ifelse(!is.na(n) & n > 1, qt(0.975, pmax(n - 1, 1)) * sd / sqrt(n), NA_real_),
            Study = factor(Study, levels = names(studies)),
            label = ifelse(is.na(n), "n = ?", sprintf("n = %d", n)))
-  # Show the study conditions, plus any other condition a later study has data for: the first
-  # study's (the original's) baselines are left out unless a replication ran them too.
-  shown <- union(as.character(study_conditions),
-                 as.character(df$condition[df$Study != names(studies)[1]]))
-  df <- df |> filter(condition %in% shown)
+  # Show only the study conditions (high and low power); baselines are left out for every study.
+  df <- df |> filter(condition %in% study_conditions) |> mutate(condition = droplevels(condition))
   dodge <- position_dodge(width = 0.6)
   ggplot(df, aes(x = condition, y = mean, colour = Study, shape = Study)) +
     # The mean of the bogus ratings on the feedback sheet (explained in the figure caption).
@@ -537,11 +537,11 @@ None of the 4 participants who completed the study were coded as suspicious. All
 
 The original study did not have a comprehension check (this replication also did not), only a suspicion check. Instead, as informal evidence that participants understood the tasks, I checked for essay completeness if participants were assigned to that condition, and also for a lack of declines in the sentence formation task. The essay opt-out was offered deliberately, as the consent form states participants are allowed to skip questions. One person declined to respond to this, and it does not show they misunderstood the prompt (it is unclear why they left the study) 
 
-Before launching pilot B, I made several changes to the study. I bolded the word ‘four’ in the instructions of the sentence formation task to address a TA’s feedback in an earlier milestone. The [EXPERIMENT.id](http://experimend.id/) was switched to galinsky2008-pilot-b so that the datasets from each pilot would be separate. I added the Prolific completion code to [experiment.js](http://experiment.js/), and also changed the device check (one Android got past this and crashed).
+Before launching pilot B, I made several changes to the study. I bolded the word ‘four’ in the instructions of the sentence formation task to address a TA’s feedback in an earlier milestone. I also lso changed the device check (one Android got past this and crashed).
 
 ### Changes after Pilot B
 
-After pilot B, I created a new id for the full study (galinsky2008-final). I dropped the two baseline conditions so that the final study has only high-power and low-power with the feedback sheet. Participants are only assigned to conditions 1 and 2, and the robot test was updated to reflect this. I coded the pilot B answers before a coding rule was finalized, and none of the responses were suspicious/borderline.  I clarified the coding rule before preregistration (changes before this are allowed, and this narrower coding rule gives the same result). The finalized rule is below: 
+After pilot B,I dropped the two baseline conditions so that the final study has only high-power and low-power with the feedback sheet. Participants are only assigned to conditions 1 and 2, and the robot test was updated to reflect this. I coded the pilot B answers before a coding rule was finalized, and none of the responses were suspicious/borderline.  I clarified the coding rule before preregistration (changes before this are allowed, and this narrower coding rule gives the same result). The finalized rule is below: 
 
 - A response is marked as ‘suspicious’ if the participant says or implies that the previous ratings or comments were fake, made up, planted, or not from other real people. Responses are coded as ‘not suspicious’ if the participant only comments about high ratings, or that the task seemed boring or odd, or guesses about the study’s topic. This rule applies to conditions 1 to 3 (condition 4 has no evaluation sheet). 
 
@@ -641,27 +641,17 @@ bind_rows(
 ```
 
 ```{r}
-#| label: sample-text
+#| label: uncoded-check
 #| eval: !expr have_data
-#| echo: false
-#| results: asis
-people <- function(n) sprintf(if (n == 1) "%d participant" else "%d participants", n)
-# The same sessions as the participant-flow table (in_flow() is defined there, without test runs).
-flow_participants <- in_flow(participants)
-flow_complete     <- in_flow(complete)
-flow_keep         <- in_flow(keep)
-flow_analysed     <- in_flow(analysed)
-n_uncoded <- sum(is.na(flow_keep$suspicious))
-cat(sprintf("Of %s who started, %s declined consent and %d consented and completed the study. Excluded as suspicious: %s. Left at least one rating blank: %s. Analysed: %s.",
-            people(nrow(flow_participants)), people(sum(flow_participants$consented %in% FALSE)),
-            nrow(flow_complete), people(nrow(flow_complete) - nrow(flow_keep)),
-            people(nrow(flow_keep) - nrow(flow_analysed)), people(nrow(flow_analysed))))
+#| include: false
+# Not shown in the report: the participant-flow table above gives the counts. This only
+# reminds you, in the render console, to code anyone not yet coded for suspicion (the same
+# sessions as the flow table; in_flow() is defined there, without test runs).
+n_uncoded <- sum(is.na(in_flow(keep)$suspicious))
 if (n_uncoded > 0) {
-  cat(sprintf(" **%d completed participant(s) have not been coded for suspicion yet**, so they are included for now: fill in the `suspicious` column of `data/raw/%s/suspicion_codes.csv` and render again.",
-              n_uncoded, experiment_id))
+  cat(sprintf("NOTE: %d completed participant(s) have not been coded for suspicion yet, so they are included for now: fill in the `suspicious` column of data/raw/%s/suspicion_codes.csv and render again.\n",
+              n_uncoded, experiment_id), file = stderr())
 }
-if (nrow(flow_analysed) == 0) cat(" No participants remain for analysis yet, so the results below are empty.")
-cat("\n")
 ```
 
 ```{r}
@@ -917,15 +907,15 @@ One or two paragraphs. For a rescue: what are the plausible reasons Phase 1 did 
 Every change from the Phase 1 experiment, one per row, each tagged with a category: Measurement, Trials, Design, Checks, Instructions, Sample, Added condition (scientific track only), or Exploratory measure (end of study only). If it is not in this table, it does not change: same materials, wording, procedure, exclusion rule and analysis. The rows below are examples for the demo; replace them with yours.
 :::
 
-+-------------+---------------------+--------------------------+----------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
-| \#          | Category            | Phase 1                  | Phase 2                                                              | Why                                                                                                 |
-+=============+=====================+==========================+======================================================================+=====================================================================================================+
-| 1           | Sample              | 27 analysed participants | 300 analysed participants (150 per frame)                            | Phase 1's interval was too wide to distinguish the original effect from a much smaller one.         |
-+-------------+---------------------+--------------------------+----------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
-| 2           | Checks              | No comprehension check   | After the choice, participants say how many people are at risk (600) | Confirms participants read the scenario; failures are reported, and excluded only if preregistered. |
-+-------------+---------------------+--------------------------+----------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
-| 3           | Exploratory measure | None                     | At the end: "How confident are you in your choice?" (1–7)            | Exploratory only; collected after every confirmatory measure.                                       |
-+-------------+---------------------+--------------------------+----------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
++---------+---------------------+--------------------------+----------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
+| \#      | Category            | Phase 1                  | Phase 2                                                              | Why                                                                                                 |
++=========+=====================+==========================+======================================================================+=====================================================================================================+
+| 1       | Sample              | 27 analysed participants | 300 analysed participants (150 per frame)                            | Phase 1's interval was too wide to distinguish the original effect from a much smaller one.         |
++---------+---------------------+--------------------------+----------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
+| 2       | Checks              | No comprehension check   | After the choice, participants say how many people are at risk (600) | Confirms participants read the scenario; failures are reported, and excluded only if preregistered. |
++---------+---------------------+--------------------------+----------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
+| 3       | Exploratory measure | None                     | At the end: "How confident are you in your choice?" (1–7)            | Exploratory only; collected after every confirmatory measure.                                       |
++---------+---------------------+--------------------------+----------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
 
 Everything not listed above is identical to Phase 1.
 
