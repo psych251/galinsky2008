@@ -88,7 +88,7 @@ bogus_mean <- 9.75
 ## Project links
 
 - **Original paper:** Galinsky, A. D., Magee, J. C., Gruenfeld, D. H, Whitson, J. A., & Liljenquist, K. A. (2008). Power reduces the press of the situation: Implications for creativity, conformity, and dissonance. *Journal of Personality and Social Psychology, 95*(6), 1450–1466. <https://doi.org/10.1037/a0012633>
-- **Preregistration:** [OSF registration](https://osf.io/XXXXX) *(registered YYYY-MM-DD, before final data collection)*
+- **Preregistration:** <https://osf.io/uxtqz/overview?view_only=bbce0afd06b7427c9f997e1fb052f5f4> *(registered 2026-11-01, before final data collection)*
 - **Live experiment:** https://psych251.github.io/galinsky2008/
 - **Repository:** <https://github.com/psych251/galinsky2008.git>
 :::
