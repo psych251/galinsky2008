@@ -16,6 +16,8 @@
  *            evaluation sheet, suspicion, demographics, debrief. No time limits.
  *   Random:  simple random assignment to conditions 1 and 2, equal probability; no
  *            counterbalancing.
+ *            TEMPORARY, LOW-POWER TOP-UP: right now every participant gets condition 2
+ *            (low power), not random assignment. See ASSIGNED_CONDITIONS below.
  *   Checks:  none built in. Exclusions are defined in the report, not here.
  */
 
@@ -74,7 +76,15 @@ const CHUNK_SIZE = Number(URL_PARAMS.get("chunk_size")) || EXPERIMENT.chunk_size
 if (USE_EMULATOR && URL_PARAMS.get("cc")) EXPERIMENT.prolific_completion_code = URL_PARAMS.get("cc");
 // Conditions participants are randomly assigned to, with equal probability. Conditions 3 and 4
 // (no prime) are still defined in CONDITIONS below but are not assigned.
-const ASSIGNED_CONDITIONS = [1, 2];
+//
+// TEMPORARY, LOW-POWER TOP-UP (OSF registration update, November 2026).
+// The full sample ended up with 48 high-power and 25 low-power participants analysed, by
+// chance. As registered, 13 more places are being added to the same Prolific study, and all
+// of those participants get condition 2 (low power). With only one condition in this list,
+// there is no random assignment: every new session is condition 2.
+// WHEN THE 13 PLACES ARE FILLED: change this back to [1, 2], and put back the two tests in
+// tests/experiment.spec.js marked "LOW-POWER TOP-UP".
+const ASSIGNED_CONDITIONS = [2];
 // Test-only: `?condition=N` forces one of the assigned conditions during emulator runs. Ignored
 // in live runs, and for a condition that is not assigned.
 const FORCED_CONDITION = USE_EMULATOR ? ASSIGNED_CONDITIONS.find((c) => String(c) === URL_PARAMS.get("condition")) : undefined;

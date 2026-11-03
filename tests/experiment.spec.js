@@ -151,8 +151,11 @@ test.describe("experiment", () => {
     const consoleErrors = [];
     page.on("pageerror", (e) => consoleErrors.push(String(e)));
 
-    // Emulator runs force each assigned condition (1 and 2) in turn; offline runs one random one.
-    const conditions = EMULATOR ? [1, 2] : [null];
+    // Emulator runs force each assigned condition in turn; offline runs one random one.
+    // LOW-POWER TOP-UP (temporary): only condition 2 is assigned (ASSIGNED_CONDITIONS in
+    // experiment.js), so only condition 2 can be played here. When the top-up is over and
+    // ASSIGNED_CONDITIONS is back to [1, 2], change this back to `EMULATOR ? [1, 2] : [null]`.
+    const conditions = EMULATOR ? [2] : [null];
     for (const forced of conditions) {
       await page.goto(EMULATOR
         ? `/?emulator=1&condition=${forced}&PROLIFIC_PID=robot123&STUDY_ID=s1&SESSION_ID=sess1`
@@ -258,18 +261,22 @@ test.describe("experiment", () => {
     }
   });
 
-  test("random assignment uses only conditions 1 and 2, and both occur", async ({ page }) => {
-    // 20 page loads: the chance that a fair coin never gives one of the two is about 1 in 500,000.
-    // `?condition=3` must not force an unassigned condition: it falls back to random assignment.
+  // LOW-POWER TOP-UP (temporary): this replaces the test "random assignment uses only
+  // conditions 1 and 2, and both occur" while ASSIGNED_CONDITIONS in experiment.js is [2].
+  // When the top-up is over, put that test back (it is in git history, commit 0131c8f).
+  test("low-power top-up: every session is assigned condition 2", async ({ page }) => {
+    // 20 page loads must all get condition 2 (low power). The first two loads also try to
+    // force condition 1 (high power) and condition 3 through the test-only `?condition=` URL
+    // option; neither is assigned right now, so both must still get condition 2.
     test.setTimeout(120000);
     const seen = [];
     for (let i = 0; i < 20; i++) {
-      await page.goto(EMULATOR ? (i === 0 ? "/?emulator=1&condition=3" : "/?emulator=1") : "/");
+      const tryToForce = i === 0 ? "&condition=1" : i === 1 ? "&condition=3" : "";
+      await page.goto(EMULATOR ? `/?emulator=1${tryToForce}` : "/");
       await page.waitForFunction(() => window.__condition !== undefined);
       seen.push(await page.evaluate(() => window.__condition));
     }
-    expect(seen.every((c) => c === 1 || c === 2), `assigned: ${seen.join(",")}`).toBe(true);
-    expect(new Set(seen).size, `assigned: ${seen.join(",")}`).toBe(2);
+    expect(seen.every((c) => c === 2), `assigned: ${seen.join(",")}`).toBe(true);
   });
 
   test("chunked writes (chunk_size > 1) save every trial", async ({ page }) => {
