@@ -107,7 +107,7 @@ async function runThroughExperiment(page, { stopBeforeFinish = false, declineEss
   const manip = page.locator('[data-name="manip_power"]');
   await manip.waitFor({ state: "visible" });
   await expect(manip).toContainText("how powerful did you feel?");
-  if (!declineRating) await manip.getByText("5 – Quite", { exact: true }).click();
+  if (!declineRating) await manip.getByText("Very", { exact: true }).click();
   await page.locator('input[value="Continue"]').click();
   const noticed = page.locator('[data-name="funnel_noticed"]');
   await noticed.waitFor({ state: "visible" });
@@ -280,7 +280,7 @@ test.describe("experiment", () => {
       expect(order.indexOf("manipulation_check")).toBe(order.indexOf("suspicion") + 1);
       expect(order.indexOf("funnel")).toBe(order.indexOf("manipulation_check") + 1);
       const manipRow = trials.find((t) => t.task === "manipulation_check");
-      expect(manipRow.manip_power).toBe(condition === 2 ? null : 5);
+      expect(manipRow.manip_power).toBe(condition === 2 ? null : 4);
       const funnelRow = trials.find((t) => t.task === "funnel");
       expect(funnelRow.funnel_noticed).toBe("Yes");
       expect(funnelRow.funnel_influence).toBe(2);

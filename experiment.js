@@ -14,8 +14,8 @@
  *            task instructions, 20 sentence-formation sets in fixed order (task
  *            "sentence_formation": `sentence`, `rt`, `onset_time`, `submit_time`),
  *            evaluation sheet, suspicion (funnel Q1-2), manipulation check (`manip_power`,
- *            1-7), funnel Q3-5 (`funnel_noticed` yes/no; `funnel_influence`, `funnel_belief`,
- *            5-point amount scales, 5 = a great deal),
+ *            5-point, 5 = extremely), funnel Q3-5 (`funnel_noticed` yes/no; `funnel_influence`,
+ *            `funnel_belief`, 5-point amount scales, 5 = a great deal),
  *            demographics, debrief. No time limits.
  *   Random:  assignment to conditions 1 and 2 with equal probability, from a hash of the
  *            Prolific ID (so a reload keeps the same condition), or at random without one;
@@ -505,21 +505,15 @@ const PID_CONDITION = conditionFromProlificId(URL_PARAMS.get("PROLIFIC_PID"));
   // unchanged from Phase 1, which the blind suspicion coding uses), so neither can affect the
   // key measure or the exclusion rule. Identical in both conditions; nothing here is required,
   // since the consent lets participants decline any question.
-  // Every point is labelled (a unipolar 1-7 scale); the saved value is the number 1-7.
-  const SCALE_LABELS = {
-    Extremely:  ["Not at all", "Slightly", "Somewhat", "Moderately", "Quite", "Very", "Extremely"],
-  };
-  const scale7 = (name, title, maxText) => ({
-    type: "radiogroup", name, title,
-    choices: SCALE_LABELS[maxText].map((label, i) => ({ value: i + 1, text: `${i + 1} – ${label}` })),
-  });
-  // Funnel Q4-Q5, following the course's survey-design guidance (Week 6b): a unipolar
-  // "how much" question gets 5 points with the recommended amount labels, words only, in a
-  // vertical list with the top of the scale first. Saved as 5 (A great deal) to 1 (None at all).
+  // All three rating questions follow the course's survey-design guidance (Week 6b): a unipolar
+  // question gets 5 points with the recommended verbal labels, words only, in a vertical list
+  // with the top of the scale first. "How [adjective]?" questions use the modifier labels and
+  // "How much?" questions the amount labels. Saved as 5 (top of the scale) to 1 (bottom).
+  const MODIFIER_LABELS = ["Extremely", "Very", "Moderately", "Slightly", "Not at all"];
   const AMOUNT_LABELS = ["A great deal", "A lot", "A moderate amount", "A little", "None at all"];
-  const amountScale = (name, title) => ({
+  const scale5 = (name, title, labels) => ({
     type: "radiogroup", name, title,
-    choices: AMOUNT_LABELS.map((label, i) => ({ value: AMOUNT_LABELS.length - i, text: label })),
+    choices: labels.map((label, i) => ({ value: labels.length - i, text: label })),
   });
   const manipulationCheck = {
     type: jsPsychSurvey,
@@ -528,7 +522,7 @@ const PID_CONDITION = conditionFromProlificId(URL_PARAMS.get("PROLIFIC_PID"));
       completeText: "Continue",
       pages: [{
         elements: [
-          scale7("manip_power", "While you were writing about the situation you recalled at the start of the study, how powerful did you feel?", "Extremely"),
+          scale5("manip_power", "While you were writing about the situation you recalled at the start of the study, how powerful did you feel?", MODIFIER_LABELS),
         ],
       }],
     },
@@ -545,8 +539,8 @@ const PID_CONDITION = conditionFromProlificId(URL_PARAMS.get("PROLIFIC_PID"));
       pages: [{
         elements: [
           { type: "radiogroup", name: "funnel_noticed", title: "Did you notice the other participants' ratings?", choices: ["Yes", "No"] },
-          amountScale("funnel_influence", "How much did the ratings influence yours?"),
-          amountScale("funnel_belief", "How much did you believe those ratings came from real previous participants?"),
+          scale5("funnel_influence", "How much did the ratings influence yours?", AMOUNT_LABELS),
+          scale5("funnel_belief", "How much did you believe those ratings came from real previous participants?", AMOUNT_LABELS),
         ],
       }],
     },
