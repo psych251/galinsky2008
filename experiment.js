@@ -504,9 +504,14 @@ const PID_CONDITION = conditionFromProlificId(URL_PARAMS.get("PROLIFIC_PID"));
   // unchanged from Phase 1, which the blind suspicion coding uses), so neither can affect the
   // key measure or the exclusion rule. Identical in both conditions; nothing here is required,
   // since the consent lets participants decline any question.
+  // Every point is labelled (a unipolar 1-7 scale); the saved value is the number 1-7.
+  const SCALE_LABELS = {
+    Extremely:  ["Not at all", "Slightly", "Somewhat", "Moderately", "Quite", "Very", "Extremely"],
+    Completely: ["Not at all", "Slightly", "Somewhat", "Moderately", "Mostly", "Very much", "Completely"],
+  };
   const scale7 = (name, title, maxText) => ({
-    type: "rating", name, title, rateMin: 1, rateMax: 7, displayMode: "buttons",
-    minRateDescription: "Not at all", maxRateDescription: maxText, rateDescriptionLocation: "leftRight",
+    type: "radiogroup", name, title,
+    choices: SCALE_LABELS[maxText].map((label, i) => ({ value: i + 1, text: `${i + 1} – ${label}` })),
   });
   const manipulationCheck = {
     type: jsPsychSurvey,

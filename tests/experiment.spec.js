@@ -107,13 +107,13 @@ async function runThroughExperiment(page, { stopBeforeFinish = false, declineEss
   const manip = page.locator('[data-name="manip_power"]');
   await manip.waitFor({ state: "visible" });
   await expect(manip).toContainText("how powerful did you feel?");
-  if (!declineRating) await manip.getByText("5", { exact: true }).click();
+  if (!declineRating) await manip.getByText("5 – Quite", { exact: true }).click();
   await page.locator('input[value="Continue"]').click();
   const noticed = page.locator('[data-name="funnel_noticed"]');
   await noticed.waitFor({ state: "visible" });
   await noticed.getByText("Yes", { exact: true }).click();
-  await page.locator('[data-name="funnel_influence"]').getByText("2", { exact: true }).click();
-  await page.locator('[data-name="funnel_belief"]').getByText("6", { exact: true }).click();
+  await page.locator('[data-name="funnel_influence"]').getByText("2 – Slightly", { exact: true }).click();
+  await page.locator('[data-name="funnel_belief"]').getByText("6 – Very much", { exact: true }).click();
   await page.locator('input[value="Continue"]').click();
   // 7. demographics (SurveyJS)
   await page.locator('input[type="number"]').fill("34");
