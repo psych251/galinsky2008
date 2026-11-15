@@ -112,8 +112,8 @@ async function runThroughExperiment(page, { stopBeforeFinish = false, declineEss
   const noticed = page.locator('[data-name="funnel_noticed"]');
   await noticed.waitFor({ state: "visible" });
   await noticed.getByText("Yes", { exact: true }).click();
-  await page.locator('[data-name="funnel_influence"]').getByText("2 – Slightly", { exact: true }).click();
-  await page.locator('[data-name="funnel_belief"]').getByText("6 – Very much", { exact: true }).click();
+  await page.locator('[data-name="funnel_influence"]').getByText("A little", { exact: true }).click();
+  await page.locator('[data-name="funnel_belief"]').getByText("A lot", { exact: true }).click();
   await page.locator('input[value="Continue"]').click();
   // 7. demographics (SurveyJS)
   await page.locator('input[type="number"]').fill("34");
@@ -284,7 +284,7 @@ test.describe("experiment", () => {
       const funnelRow = trials.find((t) => t.task === "funnel");
       expect(funnelRow.funnel_noticed).toBe("Yes");
       expect(funnelRow.funnel_influence).toBe(2);
-      expect(funnelRow.funnel_belief).toBe(6);
+      expect(funnelRow.funnel_belief).toBe(4);
       const demo = trials.find((t) => t.task === "demographics");
       expect(demo.response.age).toBe(34);
 
