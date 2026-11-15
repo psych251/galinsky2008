@@ -13,9 +13,12 @@
  *   Trials:  consent, welcome, power prime (conditions 1-2 only; `essay`, >= 200 chars),
  *            task instructions, 20 sentence-formation sets in fixed order (task
  *            "sentence_formation": `sentence`, `rt`, `onset_time`, `submit_time`),
- *            evaluation sheet, suspicion, demographics, debrief. No time limits.
- *   Random:  simple random assignment to conditions 1 and 2, equal probability; no
- *            counterbalancing.
+ *            evaluation sheet, suspicion (funnel Q1-2), manipulation check (`manip_power`,
+ *            1-7), funnel Q3-5 (`funnel_noticed`, `funnel_influence`, `funnel_belief`),
+ *            demographics, debrief. No time limits.
+ *   Random:  assignment to conditions 1 and 2 with equal probability, from a hash of the
+ *            Prolific ID (so a reload keeps the same condition), or at random without one;
+ *            no counterbalancing.
  *   Checks:  none built in. Exclusions are defined in the report, not here.
  */
 
@@ -27,7 +30,7 @@ window.TEMPLATE_VERSION = "0.1.0";
 const EXPERIMENT = {
   // Firestore path: experiments/<id>/participants/... Change it when you start a new study
   // so pilot data and real data never mix (e.g. "smith2016-pilot-a", "smith2016-final").
-  id: "galinsky2008-phase1-fullsample",
+  id: "galinsky2008-phase2",
 
   // Trials per Firestore write. 1 = save every trial the moment it finishes (dropouts leave
   // partial data). The free tier allows 20,000 writes/day: with 200 participants x 100 trials
@@ -78,6 +81,22 @@ const ASSIGNED_CONDITIONS = [1, 2];
 // Test-only: `?condition=N` forces one of the assigned conditions during emulator runs. Ignored
 // in live runs, and for a condition that is not assigned.
 const FORCED_CONDITION = USE_EMULATOR ? ASSIGNED_CONDITIONS.find((c) => String(c) === URL_PARAMS.get("condition")) : undefined;
+// Condition from the Prolific ID, so that a participant who reloads the page or starts again
+// gets the same condition instead of a new draw (in Phase 1, 4 analysed participants saw both
+// primes this way). The ID is hashed (FNV-1a, 32 bit), which splits IDs between the conditions
+// like a coin flip but always gives the same answer for the same ID. Visitors without a real
+// Prolific ID (local tests, Prolific's unfilled "{{%PROLIFIC_PID%}}" placeholder) are assigned
+// at random as before.
+function conditionFromProlificId(pid) {
+  if (!pid || pid.includes("{{")) return undefined;
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < pid.length; i++) {
+    hash ^= pid.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return ASSIGNED_CONDITIONS[hash % ASSIGNED_CONDITIONS.length];
+}
+const PID_CONDITION = conditionFromProlificId(URL_PARAMS.get("PROLIFIC_PID"));
 
 // ---------------------------------------------------------------------------
 // Boot: connect the saver first so even a crash in the first trial gets logged.
@@ -155,17 +174,19 @@ const FORCED_CONDITION = USE_EMULATOR ? ASSIGNED_CONDITIONS.find((c) => String(c
     experiment_id: EXPERIMENT.id,
   });
 
-  // Random assignment to one of the ASSIGNED_CONDITIONS, recorded on every trial and on the
-  // participant document. (For exact counterbalancing you would need a server; random
-  // assignment is fine at course sample sizes.) `condition` is the number 1-4; `prime` and
-  // `sheet` spell out its two components so the analysis never has to decode the number.
+  // Assignment to one of the ASSIGNED_CONDITIONS, recorded on every trial and on the
+  // participant document: from the Prolific ID when there is one (PID_CONDITION, above), at
+  // random otherwise. (For exact counterbalancing you would need a server; this is fine at
+  // course sample sizes.) `condition` is the number 1-4; `prime` and `sheet` spell out its two
+  // components so the analysis never has to decode the number.
   const CONDITIONS = {
     1: { prime: "high_power", sheet: "feedback" },
     2: { prime: "low_power", sheet: "feedback" },
     3: { prime: "none", sheet: "feedback" },
     4: { prime: "none", sheet: "blank" },
   };
-  const condition = FORCED_CONDITION || jsPsych.randomization.sampleWithoutReplacement(ASSIGNED_CONDITIONS, 1)[0];
+  const condition = FORCED_CONDITION || PID_CONDITION ||
+    jsPsych.randomization.sampleWithoutReplacement(ASSIGNED_CONDITIONS, 1)[0];
   const { prime, sheet } = CONDITIONS[condition];
   jsPsych.data.addProperties({ condition: condition, prime: prime, sheet: sheet });
   saver.updateParticipant({ condition: condition, prime: prime, sheet: sheet });
@@ -409,18 +430,49 @@ const FORCED_CONDITION = USE_EMULATOR ? ASSIGNED_CONDITIONS.find((c) => String(c
             ${shownRows.map((r) => `<tr class="previous-row"><td>${r.participant}</td><td>${r.interesting}</td><td>${r.enjoyable}</td><td>${r.comment}</td></tr>`).join("")}
             <tr class="own-row">
               <td>${OWN_ROW_NUMBER}</td>
-              <td><input type="number" name="interesting" min="1" max="11" step="1" aria-label="Interesting (1 to 11)"></td>
-              <td><input type="number" name="enjoyable" min="1" max="11" step="1" aria-label="Enjoyable (1 to 11)"></td>
+              ${["interesting", "enjoyable"].map((name) => `<td>
+                <input type="number" name="${name}" min="1" max="11" step="1" required
+                  aria-label="${name === "interesting" ? "Interesting" : "Enjoyable"} (1 to 11)" aria-describedby="rating-error">
+                <label class="rating-decline"><input type="checkbox" name="${name}_declined" value="yes"> ${DECLINE_TEXT}</label>
+              </td>`).join("")}
               <td><input type="text" name="comments" aria-label="Comments" autocomplete="off"></td>
             </tr>
           </tbody>
         </table>
+        <p class="field-error" id="rating-error" role="alert" hidden>Please give both ratings (1 to 11), or tick "${DECLINE_TEXT}".</p>
       </div>`,
     data: { task: "evaluation_sheet", rows_shown: shownRows.length, own_row: OWN_ROW_NUMBER },
+    // The two ratings are required so they cannot be skipped by accident; the consent lets
+    // participants decline any question, so each has an opt-out that lifts the requirement
+    // and is logged as `interesting_declined` / `enjoyable_declined`. A declined rating is
+    // saved as null, so the conformity index is missing, as for a blank rating in Phase 1.
+    on_load: () => {
+      const error = document.getElementById("rating-error");
+      for (const name of ["interesting", "enjoyable"]) {
+        const input = document.querySelector(`.feedback-sheet input[name="${name}"]`);
+        const decline = document.querySelector(`.feedback-sheet input[name="${name}_declined"]`);
+        input.addEventListener("invalid", (e) => {
+          e.preventDefault();
+          error.hidden = false;
+          input.setAttribute("aria-invalid", "true");
+        });
+        input.addEventListener("input", () => {
+          if (input.validity.valid) input.removeAttribute("aria-invalid");
+        });
+        // Declining disables the box, which lifts the requirement.
+        decline.addEventListener("change", () => {
+          input.disabled = decline.checked;
+          input.removeAttribute("aria-invalid");
+          error.hidden = true;
+        });
+      }
+    },
     on_finish: (data) => {
       const toRating = (v) => (v === "" || v === undefined ? null : Number(v));
-      data.interesting = toRating(data.response.interesting);
-      data.enjoyable = toRating(data.response.enjoyable);
+      data.interesting_declined = data.response.interesting_declined === "yes";
+      data.enjoyable_declined = data.response.enjoyable_declined === "yes";
+      data.interesting = data.interesting_declined ? null : toRating(data.response.interesting);
+      data.enjoyable = data.enjoyable_declined ? null : toRating(data.response.enjoyable);
       data.sheet_comment = data.response.comments || "";
     },
   };
@@ -443,6 +495,54 @@ const FORCED_CONDITION = USE_EMULATOR ? ASSIGNED_CONDITIONS.find((c) => String(c
       }],
     },
     data: { task: "suspicion" },
+  };
+
+  // -------------------------------------------------------------------------
+  // 6b. Phase 2: manipulation check, then the rest of the funnel debrief
+  // -------------------------------------------------------------------------
+  // Both come after the ratings and after funnel questions 1-2 (the suspicion page above,
+  // unchanged from Phase 1, which the blind suspicion coding uses), so neither can affect the
+  // key measure or the exclusion rule. Identical in both conditions; nothing here is required,
+  // since the consent lets participants decline any question.
+  const scale7 = (name, title, maxText) => ({
+    type: "rating", name, title, rateMin: 1, rateMax: 7, displayMode: "buttons",
+    minRateDescription: "Not at all", maxRateDescription: maxText, rateDescriptionLocation: "leftRight",
+  });
+  const manipulationCheck = {
+    type: jsPsychSurvey,
+    survey_json: {
+      showQuestionNumbers: "off",
+      completeText: "Continue",
+      pages: [{
+        elements: [
+          scale7("manip_power", "While you were writing about the situation you recalled at the start of the study, how powerful did you feel?", "Extremely"),
+        ],
+      }],
+    },
+    data: { task: "manipulation_check" },
+    on_finish: (data) => {
+      data.manip_power = data.response.manip_power ?? null;
+    },
+  };
+  const funnel = {
+    type: jsPsychSurvey,
+    survey_json: {
+      showQuestionNumbers: "off",
+      completeText: "Continue",
+      pages: [{
+        elements: [
+          { type: "radiogroup", name: "funnel_noticed", title: "Did you notice the other participants' ratings?", choices: ["Yes", "No"] },
+          scale7("funnel_influence", "How much did the ratings influence yours?", "Completely"),
+          scale7("funnel_belief", "How much did you believe those ratings came from real previous participants?", "Completely"),
+        ],
+      }],
+    },
+    data: { task: "funnel" },
+    on_finish: (data) => {
+      data.funnel_noticed = data.response.funnel_noticed ?? null;
+      data.funnel_influence = data.response.funnel_influence ?? null;
+      data.funnel_belief = data.response.funnel_belief ?? null;
+    },
   };
 
   // -------------------------------------------------------------------------
@@ -527,6 +627,8 @@ const FORCED_CONDITION = USE_EMULATOR ? ASSIGNED_CONDITIONS.find((c) => String(c
     sentenceTask,
     evaluationSheet,
     suspicion,
+    manipulationCheck,
+    funnel,
     demographics,
     debrief,
   ]);

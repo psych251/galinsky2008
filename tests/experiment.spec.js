@@ -14,7 +14,7 @@ const { test, expect, devices } = require("@playwright/test");
 
 const EMULATOR = process.env.EMULATOR === "1" || !!process.env.FIRESTORE_EMULATOR_HOST;
 const PROJECT = "demo-psych251";
-const EXPERIMENT_ID = "galinsky2008-phase1-fullsample";
+const EXPERIMENT_ID = "galinsky2008-phase2";
 const FS = `http://localhost:8080/v1/projects/${PROJECT}/databases/(default)/documents`;
 
 const N_SENTENCE_SETS = 20;
@@ -27,7 +27,8 @@ const DECLINED_SET = 2; // the robot ticks "I'd prefer not to answer" on this se
 // The branches below for 3 and 4 are kept so they work again if those conditions return.
 // With { stopBeforeFinish: true } it stops on the debrief screen without clicking Finish.
 // With { declineEssay: true } it writes a short essay, then declines instead of finishing it.
-async function runThroughExperiment(page, { stopBeforeFinish = false, declineEssay = false } = {}) {
+// With { declineRating: true } it declines the "enjoyable" rating instead of giving it.
+async function runThroughExperiment(page, { stopBeforeFinish = false, declineEssay = false, declineRating = false } = {}) {
   // 1. consent
   await page.getByRole("button", { name: "I agree to participate" }).click();
   const condition = await page.evaluate(() => window.__condition);
@@ -83,13 +84,36 @@ async function runThroughExperiment(page, { stopBeforeFinish = false, declineEss
   await sheet.waitFor({ state: "visible" });
   await expect(sheet.locator(".previous-row")).toHaveCount(condition === 4 ? 0 : 10);
   await expect(sheet.locator(".own-row td").first()).toHaveText("29");
+  // The ratings are required: continuing with them blank is refused and the sheet stays.
+  await page.locator("#jspsych-survey-html-form-next").click();
+  await expect(sheet).toBeVisible();
+  await expect(page.locator("#rating-error")).toBeVisible();
   await sheet.locator('input[name="interesting"]').fill("3");
-  await sheet.locator('input[name="enjoyable"]').fill("4");
+  if (declineRating) {
+    // Declining a rating lifts its requirement: its box is disabled and left empty.
+    await sheet.locator('input[name="enjoyable_declined"]').check();
+    await expect(sheet.locator('input[name="enjoyable"]')).toBeDisabled();
+  } else {
+    await sheet.locator('input[name="enjoyable"]').fill("4");
+  }
   await sheet.locator('input[name="comments"]').fill("robot comment");
   await page.locator("#jspsych-survey-html-form-next").click();
   // 6. suspicion (two optional free-text questions)
   await page.locator('[data-name="suspicion_purpose"] textarea').fill("Robot thinks it was about sentences.");
   await page.locator('[data-name="suspicion_strange"] textarea').fill("Robot suspects nothing.");
+  await page.locator('input[value="Continue"]').click();
+  // 6b. Phase 2: manipulation check (1-7, optional), then funnel questions 3-5 (optional).
+  // With { declineRating: true } the robot also leaves the manipulation check unanswered.
+  const manip = page.locator('[data-name="manip_power"]');
+  await manip.waitFor({ state: "visible" });
+  await expect(manip).toContainText("how powerful did you feel?");
+  if (!declineRating) await manip.getByText("5", { exact: true }).click();
+  await page.locator('input[value="Continue"]').click();
+  const noticed = page.locator('[data-name="funnel_noticed"]');
+  await noticed.waitFor({ state: "visible" });
+  await noticed.getByText("Yes", { exact: true }).click();
+  await page.locator('[data-name="funnel_influence"]').getByText("2", { exact: true }).click();
+  await page.locator('[data-name="funnel_belief"]').getByText("6", { exact: true }).click();
   await page.locator('input[value="Continue"]').click();
   // 7. demographics (SurveyJS)
   await page.locator('input[type="number"]').fill("34");
@@ -161,8 +185,8 @@ test.describe("experiment", () => {
       const mode = await page.evaluate(() => window.__saver.mode);
       expect(mode).toBe(EMULATOR ? "emulator" : "offline");
 
-      // Condition 2 declines the essay, so both paths through the prime are checked.
-      const condition = await runThroughExperiment(page, { declineEssay: forced === 2 });
+      // Condition 2 declines the essay and one rating, so both paths through each are checked.
+      const condition = await runThroughExperiment(page, { declineEssay: forced === 2, declineRating: forced === 2 });
       if (forced) expect(condition).toBe(forced);
 
       // No uncaught errors from the experiment itself.
@@ -242,13 +266,25 @@ test.describe("experiment", () => {
       // Evaluation sheet: both ratings and the comment, and which version of the sheet.
       const evalRow = trials.find((t) => t.task === "evaluation_sheet");
       expect(evalRow.interesting).toBe(3);
-      expect(evalRow.enjoyable).toBe(4);
+      expect(evalRow.interesting_declined).toBe(false);
+      expect(evalRow.enjoyable).toBe(condition === 2 ? null : 4);
+      expect(evalRow.enjoyable_declined).toBe(condition === 2);
       expect(evalRow.sheet_comment).toBe("robot comment");
       expect(evalRow.rows_shown).toBe(expected.sheet === "feedback" ? 10 : 0);
 
       const susp = trials.find((t) => t.task === "suspicion");
       expect(susp.response.suspicion_purpose).toBe("Robot thinks it was about sentences.");
       expect(susp.response.suspicion_strange).toBe("Robot suspects nothing.");
+      // Phase 2 checks, after the suspicion page and in this order; the check is optional.
+      const order = trials.map((t) => t.task);
+      expect(order.indexOf("manipulation_check")).toBe(order.indexOf("suspicion") + 1);
+      expect(order.indexOf("funnel")).toBe(order.indexOf("manipulation_check") + 1);
+      const manipRow = trials.find((t) => t.task === "manipulation_check");
+      expect(manipRow.manip_power).toBe(condition === 2 ? null : 5);
+      const funnelRow = trials.find((t) => t.task === "funnel");
+      expect(funnelRow.funnel_noticed).toBe("Yes");
+      expect(funnelRow.funnel_influence).toBe(2);
+      expect(funnelRow.funnel_belief).toBe(6);
       const demo = trials.find((t) => t.task === "demographics");
       expect(demo.response.age).toBe(34);
 
@@ -270,6 +306,24 @@ test.describe("experiment", () => {
     }
     expect(seen.every((c) => c === 1 || c === 2), `assigned: ${seen.join(",")}`).toBe(true);
     expect(new Set(seen).size, `assigned: ${seen.join(",")}`).toBe(2);
+  });
+
+  test("the same Prolific ID always gets the same condition, and different IDs get both", async ({ page }) => {
+    // A reload or restart must not draw a new condition: assignment comes from the Prolific ID.
+    test.setTimeout(120000);
+    const base = EMULATOR ? "/?emulator=1&" : "/?";
+    const conditionFor = async (pid) => {
+      await page.goto(`${base}PROLIFIC_PID=${pid}&STUDY_ID=s1&SESSION_ID=sess1`);
+      await page.waitForFunction(() => window.__condition !== undefined);
+      return page.evaluate(() => window.__condition);
+    };
+    const pids = Array.from({ length: 12 }, (_, i) => `robotpid${i}`);
+    const first = [];
+    for (const pid of pids) first.push(await conditionFor(pid));
+    expect(first.every((c) => c === 1 || c === 2), `assigned: ${first.join(",")}`).toBe(true);
+    expect(new Set(first).size, `assigned: ${first.join(",")}`).toBe(2);
+    // Reloading with the same IDs gives the same conditions.
+    for (let i = 0; i < 3; i++) expect(await conditionFor(pids[i])).toBe(first[i]);
   });
 
   test("chunked writes (chunk_size > 1) save every trial", async ({ page }) => {

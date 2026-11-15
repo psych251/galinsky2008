@@ -235,6 +235,11 @@ body,
 .feedback-sheet .own-row td { background: var(--c-primary-tint); padding: 8px 10px; font-weight: 700; }
 .feedback-sheet input[type="number"] { width: 4.5em; font-size: 17px; padding: 6px 8px; text-align: center; }
 .feedback-sheet input[type="text"] { width: 100%; font-size: 17px; padding: 6px 8px; }
+.feedback-sheet .rating-decline {
+  display: flex; align-items: center; justify-content: center; gap: 0.35em;
+  margin-top: 0.35em; font-size: 13px; font-weight: 400; color: var(--c-muted); cursor: pointer;
+}
+.feedback-sheet .rating-decline input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--c-primary); }
 
 /* ---------------------------------------------------------------------------
  * SurveyJS pages (power-prime essay, suspicion, demographics)
