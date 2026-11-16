@@ -308,22 +308,54 @@ test.describe("experiment", () => {
     expect(new Set(seen).size, `assigned: ${seen.join(",")}`).toBe(2);
   });
 
-  test("the same Prolific ID always gets the same condition, and different IDs get both", async ({ page }) => {
-    // A reload or restart must not draw a new condition: assignment comes from the Prolific ID.
+  test("block randomization balances conditions, keeps a Prolific ID's condition, and skips visitors without one", async ({ page }) => {
+    test.skip(!EMULATOR, "needs the Firestore emulator");
     test.setTimeout(120000);
-    const base = EMULATOR ? "/?emulator=1&" : "/?";
-    const conditionFor = async (pid) => {
-      await page.goto(`${base}PROLIFIC_PID=${pid}&STUDY_ID=s1&SESSION_ID=sess1`);
-      await page.waitForFunction(() => window.__condition !== undefined);
-      return page.evaluate(() => window.__condition);
+    const assignmentFor = async (pid) => {
+      await page.goto(pid ? `/?emulator=1&PROLIFIC_PID=${pid}&STUDY_ID=s1&SESSION_ID=sess1` : "/?emulator=1");
+      await page.waitForFunction(() => window.__assignment !== undefined);
+      return page.evaluate(() => window.__assignment);
     };
-    const pids = Array.from({ length: 12 }, (_, i) => `robotpid${i}`);
-    const first = [];
-    for (const pid of pids) first.push(await conditionFor(pid));
-    expect(first.every((c) => c === 1 || c === 2), `assigned: ${first.join(",")}`).toBe(true);
-    expect(new Set(first).size, `assigned: ${first.join(",")}`).toBe(2);
-    // Reloading with the same IDs gives the same conditions.
-    for (let i = 0; i < 3; i++) expect(await conditionFor(pids[i])).toBe(first[i]);
+    // 12 new Prolific IDs take 12 consecutive slots, so they cover at least two whole blocks
+    // of 4, and every whole block must hold exactly 2 of each condition.
+    const run = Date.now();
+    const pids = Array.from({ length: 12 }, (_, i) => `blockpid${run}x${i}`);
+    const got = [];
+    for (const pid of pids) got.push(await assignmentFor(pid));
+    expect(got.every((a) => a.method === "block"), JSON.stringify(got)).toBe(true);
+    const slots = got.map((a) => a.slot);
+    expect(slots, "slots are consecutive").toEqual(slots.map((_, i) => slots[0] + i));
+    const blocks = {};
+    for (const a of got) (blocks[Math.floor(a.slot / 4)] ??= []).push(a.condition);
+    const whole = Object.values(blocks).filter((b) => b.length === 4);
+    expect(whole.length).toBeGreaterThanOrEqual(2);
+    for (const b of whole) {
+      expect(b.filter((c) => c === 1).length, `block ${b}`).toBe(2);
+      expect(b.filter((c) => c === 2).length, `block ${b}`).toBe(2);
+    }
+    // A reload with the same Prolific ID reuses its condition and slot, and uses no new slot.
+    const again = await assignmentFor(pids[0]);
+    expect(again).toEqual({ condition: got[0].condition, method: "reused", slot: got[0].slot });
+    const next = await assignmentFor(`blockpid${run}xnew`);
+    expect(next.slot).toBe(slots[slots.length - 1] + 1);
+    // No Prolific ID (pilots, local tests): random, and no slot used.
+    const noId = await assignmentFor(null);
+    expect(noId.method).toBe("random");
+    expect(noId.slot).toBe(null);
+    expect((await assignmentFor(`blockpid${run}xnew2`)).slot).toBe(next.slot + 1);
+  });
+
+  test("without the counter, a Prolific ID still gets the same condition every time", async ({ page }) => {
+    // Offline (no emulator), the counter cannot be reached: the fallback is a hash of the ID.
+    test.skip(EMULATOR, "checks the offline fallback");
+    const conditionFor = async (pid) => {
+      await page.goto(`/?PROLIFIC_PID=${pid}&STUDY_ID=s1&SESSION_ID=sess1`);
+      await page.waitForFunction(() => window.__assignment !== undefined);
+      return page.evaluate(() => window.__assignment);
+    };
+    const a = await conditionFor("offlinepid1");
+    expect(a.method).toBe("pid-hash");
+    expect((await conditionFor("offlinepid1")).condition).toBe(a.condition);
   });
 
   test("chunked writes (chunk_size > 1) save every trial", async ({ page }) => {
@@ -528,8 +560,32 @@ test.describe("experiment", () => {
         fb.setDoc(fb.doc(s.db, "experiments", s.opts.experiment_id, "participants", s.uid), { sneaky: true }));
       await attempt("another browser's run id", () =>
         fb.setDoc(fb.doc(s.db, "experiments", s.opts.experiment_id, "participants", "someone-else-abcd1234"), { sneaky: true }));
+      // Block randomization: the counter can be read and advanced by exactly 1, nothing else.
+      const exp = "rules-test-" + Date.now();
+      const counter = fb.doc(s.db, "experiments", exp, "assignment", "counter");
+      await attempt("counter created at 5", () => fb.setDoc(counter, { next: 5 }));
+      await attempt("counter created at 1 (should be allowed)", () => fb.setDoc(counter, { next: 1 }));
+      await attempt("counter read (should be allowed)", () => fb.getDoc(counter));
+      await attempt("counter jumped by 3", () => fb.setDoc(counter, { next: 4 }));
+      await attempt("counter with an extra field", () => fb.setDoc(counter, { next: 2, note: "x" }));
+      await attempt("counter advanced by 1 (should be allowed)", () => fb.setDoc(counter, { next: 2 }));
+      const byId = fb.doc(s.db, "experiments", exp, "assignment_by_id", "abc123");
+      await attempt("assignment to a condition that is not assigned", () => fb.setDoc(byId, { condition: 3, slot: 0 }));
+      await attempt("assignment created (should be allowed)", () => fb.setDoc(byId, { condition: 1, slot: 0 }));
+      await attempt("assignment changed afterwards", () => fb.setDoc(byId, { condition: 2, slot: 0 }));
+      await attempt("participant doc read in the same experiment", () => fb.getDoc(fb.doc(s.db, "experiments", exp, "participants", "x")));
       return out;
     });
+    expect(results["counter created at 5"]).toBe("permission-denied");
+    expect(results["counter created at 1 (should be allowed)"]).toBe("allowed");
+    expect(results["counter read (should be allowed)"]).toBe("allowed");
+    expect(results["counter jumped by 3"]).toBe("permission-denied");
+    expect(results["counter with an extra field"]).toBe("permission-denied");
+    expect(results["counter advanced by 1 (should be allowed)"]).toBe("allowed");
+    expect(results["assignment to a condition that is not assigned"]).toBe("permission-denied");
+    expect(results["assignment created (should be allowed)"]).toBe("allowed");
+    expect(results["assignment changed afterwards"]).toBe("permission-denied");
+    expect(results["participant doc read in the same experiment"]).toBe("permission-denied");
 
     expect(results["read own doc"]).toBe("permission-denied");
     expect(results["write other participant"]).toBe("permission-denied");

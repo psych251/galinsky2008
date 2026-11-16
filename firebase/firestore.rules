@@ -5,7 +5,8 @@ rules_version = '2';
 // The whole security model in three lines:
 //   1. Participants are signed in anonymously, so every request carries a uid.
 //   2. A participant may only CREATE documents under their own uid.
-//   3. Nobody can READ anything from the browser. You read your data with
+//   3. Nobody can READ participant data from the browser (the only readable documents
+//      are the assignment counter and hashed assignments below). You read your data with
 //      scripts/export.js, which uses the Admin SDK and bypasses these rules.
 //
 // Do NOT loosen these to `allow read, write: if true` while debugging. Use the
@@ -48,6 +49,32 @@ service cloud.firestore {
         allow create: if isOwner(participantId) && reasonableSize();
         allow read, update, delete: if false;
       }
+    }
+
+    // Block randomization (experiment.js, assignCondition). One counter per experiment says
+    // how many assignment slots have been handed out; it holds only that number. A signed-in
+    // participant may read it and advance it by exactly 1, never set it to anything else.
+    match /experiments/{experimentId}/assignment/counter {
+      allow get: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(["next"])
+        && request.resource.data.next == 1;
+      allow update: if signedIn()
+        && request.resource.data.keys().hasOnly(["next"])
+        && request.resource.data.next == resource.data.next + 1;
+      allow list, delete: if false;
+    }
+
+    // The condition already given to a Prolific ID, so a reload keeps it. The document id is
+    // a SHA-256 hash of the experiment id and Prolific ID, never the ID itself. Each is
+    // written once and never changed; it holds only the condition and its slot.
+    match /experiments/{experimentId}/assignment_by_id/{hashedId} {
+      allow get: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(["condition", "slot"])
+        && request.resource.data.condition in [1, 2]
+        && request.resource.data.slot is int;
+      allow list, update, delete: if false;
     }
 
     // Client-side error reports. Append-only, tagged with the reporter's uid.

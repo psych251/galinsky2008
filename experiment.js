@@ -17,9 +17,10 @@
  *            5-point, 5 = extremely), funnel Q3-5 (`funnel_noticed` yes/no; `funnel_influence`,
  *            `funnel_belief`, 5-point amount scales, 5 = a great deal),
  *            demographics, debrief. No time limits.
- *   Random:  assignment to conditions 1 and 2 with equal probability, from a hash of the
- *            Prolific ID (so a reload keeps the same condition), or at random without one;
- *            no counterbalancing.
+ *   Random:  block randomization to conditions 1 and 2 (each block of 4 Prolific
+ *            participants has 2 of each, in random order), from a shared counter in
+ *            Firestore; a Prolific ID keeps its condition on reload; visitors without a
+ *            Prolific ID are assigned at random. See assignCondition.
  *   Checks:  none built in. Exclusions are defined in the report, not here.
  */
 
@@ -82,22 +83,89 @@ const ASSIGNED_CONDITIONS = [1, 2];
 // Test-only: `?condition=N` forces one of the assigned conditions during emulator runs. Ignored
 // in live runs, and for a condition that is not assigned.
 const FORCED_CONDITION = USE_EMULATOR ? ASSIGNED_CONDITIONS.find((c) => String(c) === URL_PARAMS.get("condition")) : undefined;
-// Condition from the Prolific ID, so that a participant who reloads the page or starts again
-// gets the same condition instead of a new draw (in Phase 1, 4 analysed participants saw both
-// primes this way). The ID is hashed (FNV-1a, 32 bit), which splits IDs between the conditions
-// like a coin flip but always gives the same answer for the same ID. Visitors without a real
-// Prolific ID (local tests, Prolific's unfilled "{{%PROLIFIC_PID%}}" placeholder) are assigned
-// at random as before.
-function conditionFromProlificId(pid) {
-  if (!pid || pid.includes("{{")) return undefined;
+// Condition assignment: block randomization (see assignCondition below). A shared counter in
+// Firestore hands each new participant the next slot; every block of 4 slots holds each
+// assigned condition twice, in a shuffled order, so the conditions stay balanced as data come
+// in (in Phase 1, simple random assignment drifted to 61 vs 34) while who gets what is still
+// random. The first assignment for a Prolific ID is stored (under a hash of the ID), so a
+// reload or restart keeps the same condition (in Phase 1, 4 analysed participants saw both
+// primes). Visitors without a real Prolific ID (local tests, pilots, Prolific's unfilled
+// "{{%PROLIFIC_PID%}}" placeholder) are assigned at random and do not use up slots.
+const BLOCK = ASSIGNED_CONDITIONS.flatMap((c) => [c, c]); // [1, 1, 2, 2]
+
+// 32-bit FNV-1a hash of a string.
+function fnv1a(str) {
   let hash = 0x811c9dc5;
-  for (let i = 0; i < pid.length; i++) {
-    hash ^= pid.charCodeAt(i);
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
     hash = Math.imul(hash, 0x01000193) >>> 0;
   }
-  return ASSIGNED_CONDITIONS[hash % ASSIGNED_CONDITIONS.length];
+  return hash;
 }
-const PID_CONDITION = conditionFromProlificId(URL_PARAMS.get("PROLIFIC_PID"));
+
+// The condition for slot `slot`: block floor(slot / 4) is BLOCK shuffled by a generator seeded
+// from the experiment id and block number, so every browser agrees on the order.
+function blockCondition(slot) {
+  let seed = fnv1a(`${EXPERIMENT.id}:block:${Math.floor(slot / BLOCK.length)}`);
+  const rand = () => { // mulberry32
+    seed = (seed + 0x6d2b79f5) >>> 0;
+    let t = seed;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const order = BLOCK.slice();
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order[slot % BLOCK.length];
+}
+
+// Fallback when the counter cannot be reached: the same condition for the same Prolific ID,
+// split between conditions like a coin flip.
+function conditionFromProlificId(pid) {
+  return ASSIGNED_CONDITIONS[fnv1a(pid) % ASSIGNED_CONDITIONS.length];
+}
+
+async function sha256Hex(str) {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Returns { condition, method, slot }. `method` records how the condition was chosen:
+// "block" (new slot from the counter), "reused" (this Prolific ID's earlier assignment),
+// "random" (no Prolific ID), "forced" (test-only ?condition=), or "pid-hash" (the counter
+// could not be reached, e.g. offline). `slot` is the counter slot, or null.
+async function assignCondition(saver) {
+  if (FORCED_CONDITION) return { condition: FORCED_CONDITION, method: "forced", slot: null };
+  const pid = URL_PARAMS.get("PROLIFIC_PID");
+  if (!pid || pid.includes("{{")) {
+    return { condition: ASSIGNED_CONDITIONS[Math.floor(Math.random() * ASSIGNED_CONDITIONS.length)], method: "random", slot: null };
+  }
+  if (saver.mode === "firebase" || saver.mode === "emulator") {
+    try {
+      const { fb, db } = saver;
+      const counterRef = fb.doc(db, "experiments", EXPERIMENT.id, "assignment", "counter");
+      const byIdRef = fb.doc(db, "experiments", EXPERIMENT.id, "assignment_by_id", await sha256Hex(`${EXPERIMENT.id}:${pid}`));
+      // A transaction, so two participants starting at the same moment cannot get the same slot.
+      return await fb.runTransaction(db, async (tx) => {
+        const prior = await tx.get(byIdRef);
+        if (prior.exists()) return { condition: prior.data().condition, method: "reused", slot: prior.data().slot };
+        const counter = await tx.get(counterRef);
+        const slot = counter.exists() ? counter.data().next : 0;
+        const condition = blockCondition(slot);
+        if (counter.exists()) tx.update(counterRef, { next: slot + 1 });
+        else tx.set(counterRef, { next: 1 });
+        tx.set(byIdRef, { condition, slot });
+        return { condition, method: "block", slot };
+      });
+    } catch (e) {
+      console.warn("[assignment] block randomization unavailable; assigning from the Prolific ID instead:", e);
+    }
+  }
+  return { condition: conditionFromProlificId(pid), method: "pid-hash", slot: null };
+}
 
 // ---------------------------------------------------------------------------
 // Boot: connect the saver first so even a crash in the first trial gets logged.
@@ -175,22 +243,24 @@ const PID_CONDITION = conditionFromProlificId(URL_PARAMS.get("PROLIFIC_PID"));
     experiment_id: EXPERIMENT.id,
   });
 
-  // Assignment to one of the ASSIGNED_CONDITIONS, recorded on every trial and on the
-  // participant document: from the Prolific ID when there is one (PID_CONDITION, above), at
-  // random otherwise. (For exact counterbalancing you would need a server; this is fine at
-  // course sample sizes.) `condition` is the number 1-4; `prime` and `sheet` spell out its two
-  // components so the analysis never has to decode the number.
+  // Assignment to one of the ASSIGNED_CONDITIONS by block randomization (assignCondition,
+  // above), recorded on every trial and on the participant document with how it was chosen
+  // (`assignment_method`) and its counter slot (`assignment_slot`). `condition` is the number
+  // 1-4; `prime` and `sheet` spell out its two components so the analysis never has to
+  // decode the number.
   const CONDITIONS = {
     1: { prime: "high_power", sheet: "feedback" },
     2: { prime: "low_power", sheet: "feedback" },
     3: { prime: "none", sheet: "feedback" },
     4: { prime: "none", sheet: "blank" },
   };
-  const condition = FORCED_CONDITION || PID_CONDITION ||
-    jsPsych.randomization.sampleWithoutReplacement(ASSIGNED_CONDITIONS, 1)[0];
+  const assignment = await assignCondition(saver);
+  const condition = assignment.condition;
   const { prime, sheet } = CONDITIONS[condition];
-  jsPsych.data.addProperties({ condition: condition, prime: prime, sheet: sheet });
-  saver.updateParticipant({ condition: condition, prime: prime, sheet: sheet });
+  const assignmentFields = { assignment_method: assignment.method, assignment_slot: assignment.slot };
+  jsPsych.data.addProperties({ condition: condition, prime: prime, sheet: sheet, ...assignmentFields });
+  saver.updateParticipant({ condition: condition, prime: prime, sheet: sheet, ...assignmentFields });
+  window.__assignment = assignment; // for the automated test
   window.__condition = condition; // for the automated test
 
   // -------------------------------------------------------------------------
