@@ -45,7 +45,7 @@ const EXPERIMENT = {
 
   // Prolific: if set, participants are redirected to Prolific when they finish.
   // Leave empty for local testing or non-Prolific samples.
-  prolific_completion_code: "CPAE4SPN",
+  prolific_completion_code: "C1LXNHF7",
 
   // Contact shown in consent and debrief.
   contact_email: "stanfordpsych251@gmail.com",
